@@ -2,12 +2,13 @@
 	width: 24px;
 	height: 32px;
 	margin-left: 8px;
-	border: 1px solid #757575;
+	border: 1px solid var(--border-color);
 	border-radius: 6px;
 	font-size: 18px;
 	text-align: center;
-	font-family: 'Open Sans', sans-serif;
-	color: #373844;
+	font-family: var(--body-font);
+	color: var(--text-color);
+	background: rgba(255, 255, 255, 0.9);
 }
 
 .num-code-edit input:first-child {
@@ -15,6 +16,6 @@
 }
 
 .num-code-edit.error input {
-	border: 2px solid #be2b2b;
-	color: #be2b2b;
+	border: 2px solid var(--danger-color);
+	color: var(--danger-color);
 }

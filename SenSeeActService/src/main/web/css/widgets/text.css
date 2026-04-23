@@ -1,5 +1,5 @@
 div.error {
-	color: #be2b2b;
+	color: var(--danger-color);
 }
 
 div.message {
@@ -11,6 +11,6 @@ div.text-edit-error {
 	width: 100%;
 	max-width: 360px;
 	margin: 0 auto;
-	color: #be2b2b;
+	color: var(--danger-color);
 	padding: 0 16px;
 }

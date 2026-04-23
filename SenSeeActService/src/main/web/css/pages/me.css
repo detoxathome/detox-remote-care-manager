@@ -1,22 +1,24 @@
 .dashboard-widget {
 	display: flex;
 	align-items: center;
-	background: white;
-	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.88);
+	border: 1px solid var(--border-color);
+	border-radius: 22px;
 	height: 64px;
-	box-shadow: 2px 2px 4px 0px #b0b0b0;
+	box-shadow: 0px 18px 36px rgba(13, 26, 51, 0.1);
 	text-decoration: none;
 	margin-top: 12px;
+	backdrop-filter: blur(12px);
 }
 
 .dashboard-widget:hover {
-	background: #f8f8f8;
+	background: var(--white-hover-color);
 }
 
 .dashboard-widget-icon {
 	width: 32px;
 	height: 32px;
-	background-color: #373844;
+	background-color: var(--text-color);
 	mask-size: 32px;
 	-webkit-mask-size: 32px;
 	margin-left: 16px;
@@ -24,10 +26,11 @@
 
 .dashboard-widget-title {
 	flex-grow: 1;
-	color: #373844;
-	font-family: 'Oswald', sans-serif;
-	font-weight: 400;
-	font-size: 20px;
+	color: var(--text-color);
+	font-family: var(--heading-font);
+	font-weight: 600;
+	font-size: 18px;
+	letter-spacing: 0.03em;
 	margin: 0px 16px;
 }
 
@@ -39,13 +42,13 @@
 
 @keyframes animation-dashboard-widget-click {
 	0% {
-		background: #f8f8f8;
+		background: var(--white-hover-color);
 	}
 	50% {
-		background: #e6e6e6;
+		background: var(--white-pressed-color);
 	}
 	100% {
-		background: #f8f8f8;
+		background: var(--white-hover-color);
 	}
 }
 

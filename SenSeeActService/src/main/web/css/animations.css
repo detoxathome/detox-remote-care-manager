@@ -90,13 +90,13 @@
 
 @keyframes animation-menu-item-click {
 	0% {
-		background: #f0f0f0;
+		background: var(--white-hover-color);
 	}
 	50% {
-		background: #e6e6e6;
+		background: var(--white-pressed-color);
 	}
 	100% {
-		background: #f0f0f0;
+		background: var(--white-hover-color);
 	}
 }
 
@@ -108,13 +108,13 @@
 
 @keyframes animation-header-submenu-item-click {
 	0% {
-		background: #cde3ea;
+		background: var(--white-hover-color);
 	}
 	50% {
-		background: #bad9e3;
+		background: #dbe5f7;
 	}
 	100% {
-		background: #cde3ea;
+		background: var(--white-hover-color);
 	}
 }
 

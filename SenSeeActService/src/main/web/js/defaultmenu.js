@@ -15,6 +15,9 @@ class DefaultMenuController {
 		menuController.appendSubMenuItem('me', 'me-link-phone',
 			i18next.t('link_phone'),
 			basePath + '/me/link-phone');
+		menuController.appendMenuItem('info',
+			i18next.t('about'),
+			basePath + '/info');
 	}
 }
 

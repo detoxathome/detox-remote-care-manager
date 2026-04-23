@@ -8,11 +8,11 @@ div.background-image {
 div.background-image-left {
 	flex-grow: 1;
 	height: 44.5px;
-	background-color: #f2e9dc;
+	background-color: #edf3ff;
 }
 
 div.background-image-left.white {
-	background-color: white;
+	background-color: #f8fbff;
 }
 
 div.background-image img {
@@ -24,11 +24,11 @@ div.background-image img {
 div.background-image-right {
 	flex-grow: 1;
 	height: 11px;
-	background-color: #f2e9dc;
+	background-color: #edf3ff;
 }
 
 div.background-image-right.white {
-	background-color: white;
+	background-color: #f8fbff;
 }
 
 @media (min-width: 720px) {

@@ -1,16 +1,20 @@
 .bordered-list {
 	box-sizing: border-box;
-	border: 0.5px solid #757575;
-	border-radius: 14px;
+	border: 1px solid var(--border-color);
+	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: 0px 16px 34px rgba(13, 26, 51, 0.08);
 }
 
 .bordered-list-item {
 	height: 48px;
 	padding: 0px 16px;
 	line-height: 48px;
-	font-family: 'Oswald', sans-serif;
+	font-family: var(--heading-font);
 	font-size: 16px;
-	border-bottom: 0.5px solid #757575;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	border-bottom: 1px solid var(--border-color);
 	cursor: pointer;
 }
 
@@ -20,7 +24,7 @@
 }
 
 .bordered-list-item:hover {
-	background: #f0f0f0;
+	background: var(--white-hover-color);
 }
 
 .bordered-list-item:last-child {
@@ -31,13 +35,13 @@
 
 @keyframes animation-bordered-list-item-click {
 	0% {
-		background: #f0f0f0;
+		background: var(--white-hover-color);
 	}
 	50% {
-		background: #e0e0e0;
+		background: var(--white-pressed-color);
 	}
 	100% {
-		background: #f0f0f0;
+		background: var(--white-hover-color);
 	}
 }
 

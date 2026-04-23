@@ -18,13 +18,14 @@
 	width: 32px;
 	height: 32px;
 	margin: 8px 0px;
-	background-color: #5298b2;
+	background: linear-gradient(135deg, var(--blue-color) 0%, #355a9b 100%);
 	border-radius: 16px;
 	cursor: pointer;
+	box-shadow: 0px 10px 22px rgba(40, 70, 127, 0.2);
 }
 
 .page-back-header-back-bg:hover {
-	background-color: #62a9c3;
+	background: linear-gradient(135deg, var(--blue-hover-color) 0%, #4268b2 100%);
 }
 
 .page-back-header-back-icon {

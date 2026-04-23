@@ -33,9 +33,10 @@
 	flex-direction: column;
 	width: 100%;
 	max-width: 640px;
-	background-color: white;
-	border-radius: 16px;
-	box-shadow: 2px 2px 8px 0px #606060;
+	background-color: rgba(255, 255, 255, 0.96);
+	border: 1px solid var(--border-color);
+	border-radius: 24px;
+	box-shadow: 0px 24px 54px rgba(13, 26, 51, 0.18);
 	overflow-y: scroll;
 }
 
@@ -80,11 +81,12 @@
 
 .dialogue-header {
 	color: var(--blue-color);
-	font-family: 'Oswald', sans-serif;
-	font-weight: 400;
+	font-family: var(--heading-font);
+	font-weight: 700;
 	font-size: 22px;
 	text-transform: uppercase;
 	margin: 0px 12px 20px 12px;
+	letter-spacing: 0.08em;
 }
 
 .dialogue-text {
@@ -127,12 +129,12 @@
 
 .dialogue-field-error {
 	margin: 6px 12px 0px 12px;
-	color: #be2b2b;
+	color: var(--danger-color);
 }
 
 .dialogue-field-label.error {
 	font-weight: 600;
-	color: #be2b2b;
+	color: var(--danger-color);
 }
 
 #dialogue-widget-overlay {
@@ -158,6 +160,6 @@
 	white-space: nowrap;
 	overflow-x: hidden;
 	text-overflow: ellipsis;
-	font-family: 'Oswald';
+	font-family: var(--heading-font);
 	text-transform: uppercase;
 }

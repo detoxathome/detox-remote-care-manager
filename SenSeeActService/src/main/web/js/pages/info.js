@@ -1,12 +1,12 @@
-class HomePage {
+class InfoPage {
 	constructor() {
 		this._createView();
 	}
-	
+
 	_createView() {
-		menuController.selectMenuItem('home');
+		menuController.selectMenuItem('info');
 		$('#content').css('visibility', 'visible');
 	}
 }
 
-new HomePage();
+new InfoPage();

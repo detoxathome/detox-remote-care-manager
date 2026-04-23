@@ -20,7 +20,7 @@
 
 .active-download-item {
 	display: flex;
-	border-bottom: 0.5px solid #757575;
+	border-bottom: 1px solid var(--border-color);
 }
 
 .active-download-item:last-child {
@@ -44,8 +44,10 @@
 }
 
 .active-download-item-name {
-	font-family: 'Oswald', sans-serif;
+	font-family: var(--heading-font);
 	font-size: 16px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
 }
 
@@ -75,6 +77,6 @@
 	height: 24px;
 	mask-size: 24px 24px;
 	-webkit-mask-size: 24px 24px;
-	background-color: #373844;
+	background-color: var(--text-color);
 	cursor: pointer;
 }
