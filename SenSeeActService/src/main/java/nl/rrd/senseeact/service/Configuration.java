@@ -3,6 +3,17 @@ package nl.rrd.senseeact.service;
 import nl.rrd.senseeact.service.mail.EmailConfiguration;
 import nl.rrd.utils.AppComponent;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+
 /**
  * Configuration of the SenSeeAct Service. This is initialised from resource
  * service.properties and deployment.properties. Known property keys are defined
@@ -54,6 +65,8 @@ public class Configuration extends BaseConfiguration {
 			".mtlsCertPath";
 	public static final String DETOX_ONS_INSTANCE_MTLS_KEY_PATH_SUFFIX =
 			".mtlsKeyPath";
+	public static final String DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES =
+			"detoxDeleteAcceptedQueueMessages";
 
 	@Override
 	public String getBaseUrl() {
@@ -68,5 +81,35 @@ public class Configuration extends BaseConfiguration {
 				get(MAIL_SMTP_TLS),
 				get(MAIL_FROM)
 		);
+	}
+
+	public synchronized void setInDataDir(String key, String value)
+			throws IOException {
+		String dataDirPath = get(DATA_DIR);
+		if (dataDirPath == null || dataDirPath.isBlank()) {
+			throw new IOException("Configuration dataDir is not set");
+		}
+		File dataDir = new File(dataDirPath);
+		if (!dataDir.exists() && !dataDir.mkdirs()) {
+			throw new IOException("Failed to create dataDir: " + dataDirPath);
+		}
+		File configFile = new File(dataDir, "ssaconfig.properties");
+		Properties props = new Properties();
+		if (configFile.exists()) {
+			try (Reader reader = new InputStreamReader(
+					new FileInputStream(configFile), StandardCharsets.UTF_8)) {
+				props.load(reader);
+			}
+		}
+		props.setProperty(toDataDirPropertyKey(key), value);
+		try (Writer writer = new OutputStreamWriter(
+				new FileOutputStream(configFile), StandardCharsets.UTF_8)) {
+			props.store(writer, "SenSeeAct runtime configuration");
+		}
+	}
+
+	private String toDataDirPropertyKey(String key) {
+		return "ssaconfig" + key.substring(0, 1).toUpperCase() +
+				key.substring(1);
 	}
 }

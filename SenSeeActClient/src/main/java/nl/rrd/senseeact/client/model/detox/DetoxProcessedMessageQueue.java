@@ -10,6 +10,9 @@ import java.time.ZonedDateTime;
  * Queue record after payload transformation for ONS.
  */
 public class DetoxProcessedMessageQueue extends UTCSample {
+	@DatabaseField(value=DatabaseType.STRING, index=true)
+	private String rawQueueId;
+
 	@DatabaseField(value=DatabaseType.INT, index=true)
 	private int onsId;
 
@@ -26,12 +29,22 @@ public class DetoxProcessedMessageQueue extends UTCSample {
 	}
 
 	public DetoxProcessedMessageQueue(String user, ZonedDateTime tzTime,
-			int onsId, String type, String payload, boolean sentToOns) {
+			String rawQueueId, int onsId, String type, String payload,
+			boolean sentToOns) {
 		super(user, tzTime);
+		this.rawQueueId = rawQueueId;
 		this.onsId = onsId;
 		this.type = type;
 		this.payload = payload;
 		this.sentToOns = sentToOns;
+	}
+
+	public String getRawQueueId() {
+		return rawQueueId;
+	}
+
+	public void setRawQueueId(String rawQueueId) {
+		this.rawQueueId = rawQueueId;
 	}
 
 	public int getOnsId() {

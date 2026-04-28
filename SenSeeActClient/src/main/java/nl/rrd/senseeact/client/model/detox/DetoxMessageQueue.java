@@ -30,7 +30,8 @@ public class DetoxMessageQueue extends UTCSample {
 	 *
 	 * @param user the user (user ID)
 	 * @param tzTime the time
-	 * @param type the message type (e.g. heartrate, bloodpressure)
+	 * @param type the message type (e.g. heartrate, bloodpressure,
+	 * detox_dagstart)
 	 * @param payload the JSON payload
 	 */
 	public DetoxMessageQueue(String user, ZonedDateTime tzTime, String type,

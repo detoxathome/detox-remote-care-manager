@@ -146,13 +146,14 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					rawRecordId, ex.getMessage());
 			return;
 		}
-		DetoxProcessedMessageQueue processed = insertProcessedRecord(ssaId,
-				onsId, type, processedPayload);
+		DetoxProcessedMessageQueue processed = insertProcessedRecord(rawRecordId,
+				ssaId, onsId, type, processedPayload);
 		if (processed == null)
 			return;
 		if (sendProcessedToOns(processed.getId(), processed.getUser(),
 				processed.getOnsId(), onsInstance, processed.getPayload())) {
-			markProcessedSent(processed.getId());
+			onSuccessfulSendAcceptedByOns(processed.getRawQueueId(),
+					processed.getId());
 		}
 	}
 
@@ -173,6 +174,9 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					queueZone);
 		} else if ("bloodpressure".equals(type)) {
 			return buildBloodPressurePayload(compact, onsId, fallbackOnsTimestamp,
+					queueZone);
+		} else if ("detox_dagstart".equals(type)) {
+			return buildDetoxDagstartPayload(compact, onsId, fallbackOnsTimestamp,
 					queueZone);
 		} else {
 			throw new IllegalArgumentException("Unsupported type: " + type);
@@ -319,6 +323,52 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 	}
 
+	private String buildDetoxDagstartPayload(Map<String,Object> compact,
+			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
+		String hoeGaatHetVanochtend = requireString(compact,
+				"hoeGaatHetVanochtend",
+				"goedemorgenHoeGaatHetVanochtend",
+				"Goedemorgen, hoe gaat het vanochtend?");
+		String vertrouwenVandaag = requireString(compact,
+				"hebJeVertrouwenInVandaag",
+				"vertrouwenInVandaag",
+				"Heb je vertrouwen in vandaag?");
+		boolean contactMetHulpverlener = requireBoolean(compact,
+				"wilJeVandaagContactMetJouwHulpverlener",
+				"contactMetHulpverlener",
+				"Wil je vandaag contact met jouw hulpverlener?");
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		try {
+			Map<String,Object> paths = new LinkedHashMap<>();
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/value",
+					hoeGaatHetVanochtend);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id7,2]/value[id8,1]/value",
+					vertrouwenVandaag);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id9,3]/value[id10,1]/value",
+					contactMetHulpverlener);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/time[1]/value",
+					timestamp);
+			paths.put(
+					"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+					"");
+			String pathsString = jsonMapper.writeValueAsString(paths);
+			Map<String,Object> wrapper = new LinkedHashMap<>();
+			wrapper.put("clientId", onsId);
+			wrapper.put("archetypeId",
+					"nl.Detoxhome::openEHR-EHR-COMPOSITION.detox_dagstart_vragen_report.v0.1.0");
+			wrapper.put("pathsAndValues", pathsString);
+			return jsonMapper.writeValueAsString(wrapper);
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(
+					"Failed to build processed payload JSON");
+		}
+	}
+
 	private double requireNumber(Map<String,Object> map, String key) {
 		Object value = map.get(key);
 		if (value == null)
@@ -341,6 +391,38 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		if (map.containsKey(key))
 			return requireNumber(map, key);
 		return requireNumber(map, fallbackKey);
+	}
+
+	private String requireString(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			return value.toString();
+		}
+		throw new IllegalArgumentException("Missing required field: " + keys[0]);
+	}
+
+	private boolean requireBoolean(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null)
+				continue;
+			if (value instanceof Boolean boolValue)
+				return boolValue;
+			String strValue = value.toString().trim();
+			if ("true".equalsIgnoreCase(strValue))
+				return true;
+			if ("false".equalsIgnoreCase(strValue))
+				return false;
+			throw new IllegalArgumentException("Invalid boolean for field: " +
+					keys[0]);
+		}
+		throw new IllegalArgumentException("Missing required field: " + keys[0]);
 	}
 
 	private String resolvePayloadOnsTimestamp(Map<String,Object> compact,
@@ -447,11 +529,13 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			return "heartrate";
 		if ("bloodpressure".equals(normalized) || "blood".equals(normalized))
 			return "bloodpressure";
+		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
+			return "detox_dagstart";
 		return null;
 	}
 
-	private DetoxProcessedMessageQueue insertProcessedRecord(String user,
-			int onsId, String type, String processedPayload) {
+	private DetoxProcessedMessageQueue insertProcessedRecord(String rawQueueId,
+			String user, int onsId, String type, String processedPayload) {
 		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
 		DatabaseLoader dbLoader = DatabaseLoader.getInstance();
 		DatabaseConnection conn = null;
@@ -461,8 +545,8 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			if (projectDb == null)
 				return null;
 			DetoxProcessedMessageQueue record = new DetoxProcessedMessageQueue(
-					user, DateTimeUtils.nowMs(), onsId, type, processedPayload,
-					false);
+					user, DateTimeUtils.nowMs(), rawQueueId, onsId, type,
+					processedPayload, false);
 			projectDb.insert(DetoxProcessedMessageQueueTable.NAME, record);
 			return record;
 		} catch (DatabaseException | IOException ex) {
@@ -678,7 +762,8 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 						onsLookup.getOnsInstance() : null;
 				if (sendProcessedToOns(record.getId(), record.getUser(),
 						record.getOnsId(), onsInstance, record.getPayload())) {
-					markProcessedSent(record.getId());
+					onSuccessfulSendAcceptedByOns(record.getRawQueueId(),
+							record.getId());
 				}
 			}
 		} catch (DatabaseException | IOException ex) {
@@ -719,6 +804,50 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			}
 		} catch (DatabaseException | IOException ex) {
 			logger.error("Failed to mark detox processed queue message as sent: " +
+					ex.getMessage(), ex);
+		} finally {
+			if (conn != null)
+				conn.close();
+		}
+	}
+
+	private void onSuccessfulSendAcceptedByOns(String rawQueueId,
+			String processedRecordId) {
+		if (shouldDeleteAcceptedQueueMessages())
+			deleteAcceptedQueueRecords(rawQueueId, processedRecordId);
+		else
+			markProcessedSent(processedRecordId);
+	}
+
+	private boolean shouldDeleteAcceptedQueueMessages() {
+		Configuration config = AppComponents.get(Configuration.class);
+		String enabled = config.get(
+				Configuration.DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES, "false");
+		return Boolean.parseBoolean(enabled);
+	}
+
+	private void deleteAcceptedQueueRecords(String rawQueueId,
+			String processedRecordId) {
+		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
+		DatabaseLoader dbLoader = DatabaseLoader.getInstance();
+		DatabaseConnection conn = null;
+		try {
+			conn = dbLoader.openConnection();
+			Database projectDb = dbLoader.initProjectDatabase(conn, project);
+			if (projectDb == null)
+				return;
+			if (processedRecordId != null && !processedRecordId.isBlank()) {
+				DatabaseCriteria criteria = new DatabaseCriteria.Equal("id",
+						processedRecordId);
+				projectDb.delete(new DetoxProcessedMessageQueueTable(), criteria);
+			}
+			if (rawQueueId != null && !rawQueueId.isBlank()) {
+				DatabaseCriteria criteria = new DatabaseCriteria.Equal("id",
+						rawQueueId);
+				projectDb.delete(new DetoxMessageQueueTable(), criteria);
+			}
+		} catch (DatabaseException | IOException ex) {
+			logger.error("Failed to delete accepted detox queue records: " +
 					ex.getMessage(), ex);
 		} finally {
 			if (conn != null)
