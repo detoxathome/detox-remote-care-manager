@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import nl.detoxathome.remotecaremanager.client.model.NullableResponse;
 import nl.detoxathome.remotecaremanager.client.model.TableSpec;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxLinkedSubjectSummary;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestResult;
 import nl.detoxathome.remotecaremanager.dao.DatabaseObject;
 import nl.detoxathome.remotecaremanager.service.QueryRunner;
 import nl.detoxathome.remotecaremanager.service.RemoteCareManagerContext;
@@ -173,6 +175,43 @@ public class ProjectController {
 				(version, authDb, projectDb, user, baseProject) ->
 				exec.getSubjects(version, authDb, user, baseProject, forUser,
 						includeInactive),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/{project}/detox-subjects", method=RequestMethod.GET)
+	public List<DetoxLinkedSubjectSummary> getDetoxSubjects(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@RequestParam(value="includeInactive", required=false, defaultValue="false")
+			final String includeInactive) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, baseProject) ->
+				exec.getDetoxSubjects(version, authDb, user, baseProject,
+						includeInactive),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/{project}/detox-subject/{subject}/task-refresh",
+			method=RequestMethod.POST)
+	public DetoxTaskRefreshRequestResult createDetoxTaskRefreshRequest(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@PathVariable("subject")
+			final String subject) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, baseProject) ->
+				exec.createDetoxTaskRefreshRequest(version, authDb, projectDb,
+						user, baseProject, subject),
 				versionName, project, request, response);
 	}
 	

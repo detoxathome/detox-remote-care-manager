@@ -6,18 +6,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import nl.detoxathome.remotecaremanager.client.DetoxClient;
 import nl.detoxathome.remotecaremanager.client.exception.ErrorCode;
+import nl.detoxathome.remotecaremanager.client.exception.HttpFieldError;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskConfiguration;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskConfigurationTable;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestTable;
 import nl.detoxathome.remotecaremanager.client.model.SyncWatchResult;
 import nl.detoxathome.remotecaremanager.client.model.SyncWatchResult.ResultCode;
 import nl.detoxathome.remotecaremanager.client.project.BaseProject;
 import nl.detoxathome.remotecaremanager.dao.Database;
 import nl.detoxathome.remotecaremanager.dao.DatabaseAction;
 import nl.detoxathome.remotecaremanager.dao.DatabaseCriteria;
+import nl.detoxathome.remotecaremanager.dao.DatabaseFieldException;
 import nl.detoxathome.remotecaremanager.dao.listener.DatabaseActionListener;
 import nl.detoxathome.remotecaremanager.dao.listener.DatabaseListenerRepository;
 import nl.detoxathome.remotecaremanager.dao.sync.*;
 import nl.detoxathome.remotecaremanager.service.*;
 import nl.detoxathome.remotecaremanager.service.controller.model.SyncRegisterPushInput;
 import nl.detoxathome.remotecaremanager.service.controller.model.SyncWatchInput;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxTaskConfigurationValidator;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxTaskConfigurationValidator.TaskValidationException;
 import nl.detoxathome.remotecaremanager.service.exception.BadRequestException;
 import nl.detoxathome.remotecaremanager.service.exception.ForbiddenException;
 import nl.detoxathome.remotecaremanager.service.exception.HttpException;
@@ -438,6 +445,7 @@ public class SyncControllerExecution {
 		}
 		if (actions.isEmpty())
 			return null;
+		validateDetoxTaskSyncWrite(actions, user, subjectUser);
 		DatabaseSynchronizer sync = new DatabaseSynchronizer(
 				subjectUser.getUserid(), false);
 		sync.setIncludeTables(includeTables);
@@ -455,5 +463,46 @@ public class SyncControllerExecution {
 			throw new BadRequestException(error);
 		}
 		return null;
+	}
+
+	private void validateDetoxTaskSyncWrite(List<DatabaseAction> actions,
+			User user, User subjectUser) throws HttpException {
+		for (DatabaseAction action : actions) {
+			String table = action.getTable();
+			if (DetoxTaskRefreshRequestTable.NAME.equals(table)) {
+				throw new ForbiddenException(
+						"task_refresh_requests cannot be written through sync");
+			}
+			if (!DetoxTaskConfigurationTable.NAME.equals(table))
+				continue;
+			if (action.getAction() != DatabaseAction.Action.INSERT) {
+				throw new ForbiddenException(
+						"task_configurations only supports sync insert actions");
+			}
+			Map<?,?> data = action.getData();
+			if (data == null) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"actions",
+						"Missing sync data for task_configurations insert"));
+			}
+			Map<String,Object> normalizedData;
+			try {
+				normalizedData =
+						DetoxTaskConfigurationValidator
+								.normalizeTaskConfigurationActionData(
+										data, user, subjectUser);
+			} catch (TaskValidationException ex) {
+				throw BadRequestException.withInvalidInput(ex.toFieldError());
+			} catch (DatabaseFieldException ex) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						ex.getField(), ex.getMessage()));
+			}
+			Object source = normalizedData.get("source");
+			if (!DetoxTaskConfiguration.SOURCE_APP.equals(source)) {
+				throw new ForbiddenException(
+						"Only APP task snapshots may be written through sync");
+			}
+			action.setData(normalizedData);
+		}
 	}
 }
