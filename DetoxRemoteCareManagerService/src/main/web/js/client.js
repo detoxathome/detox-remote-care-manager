@@ -115,6 +115,17 @@ class RemoteCareManagerClient {
 		});
 	}
 
+	getDetoxOnsLookup(onsId, onsInstance = null) {
+		let url = servicePath + '/user/detox/ons-lookup?onsId=' +
+			encodeURIComponent(onsId);
+		if (onsInstance)
+			url += '&onsInstance=' + encodeURIComponent(onsInstance);
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
 	/**
 	 * Calls endpoint GET /download/projects
 	 */

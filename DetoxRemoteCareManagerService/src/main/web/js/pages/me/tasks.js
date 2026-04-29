@@ -20,6 +20,11 @@ class RemoteTaskEditorPage {
 		this._watchRegistrationId = null;
 		this._watchGeneration = 0;
 		this._loadGeneration = 0;
+		this._deepLinkSubject = null;
+		this._deepLinkOnsId = null;
+		this._deepLinkOnsInstance = null;
+		this._deepLinkResolved = false;
+		this._deepLinkApplied = false;
 		this._status = $('#remote-task-status');
 		this._banner = $('#remote-task-banner');
 		this._subjectSelect = $('#remote-task-subject-select');
@@ -96,6 +101,8 @@ class RemoteTaskEditorPage {
 				return 'You have unsaved task edits.';
 			return undefined;
 		});
+
+		this._applyUrlParams();
 	}
 
 	_renderForbidden() {
@@ -149,7 +156,75 @@ class RemoteTaskEditorPage {
 			this._clearEditorState();
 			return;
 		}
-		this._setStatus('Select a linked patient to start an edit session.');
+		if (!this._applyDeepLinkSelection())
+			this._setStatus('Select a linked patient to start an edit session.');
+	}
+
+	_applyUrlParams() {
+		let params = parseURL(window.location.href).params || {};
+		if (params['subject'])
+			this._deepLinkSubject = (params['subject'] + '').trim() || null;
+		else if (params['user'])
+			this._deepLinkSubject = (params['user'] + '').trim() || null;
+		if (params['onsId']) {
+			let onsId = (params['onsId'] + '').trim();
+			if (onsId.length > 0)
+				this._deepLinkOnsId = onsId;
+		}
+		if (params['onsInstance']) {
+			let onsInstance = (params['onsInstance'] + '').trim();
+			if (onsInstance.length > 0)
+				this._deepLinkOnsInstance = onsInstance;
+		}
+	}
+
+	_applyDeepLinkSelection() {
+		if (this._deepLinkApplied)
+			return true;
+		if (this._deepLinkSubject) {
+			return this._selectSubjectFromDeepLink(this._deepLinkSubject);
+		}
+		if (this._deepLinkOnsId && !this._deepLinkResolved) {
+			this._deepLinkResolved = true;
+			this._setStatus('Resolving linked Detox patient from ONS...');
+			this._client.getDetoxOnsLookup(this._deepLinkOnsId,
+					this._deepLinkOnsInstance)
+				.done((lookup) => {
+					let subjectId = lookup && lookup.ssaId ? lookup.ssaId : null;
+					if (!subjectId) {
+						this._setBanner('error',
+							'No linked Detox patient was returned for this ONS link.');
+						this._setStatus('Select a linked patient to start an edit session.');
+						return;
+					}
+					this._deepLinkSubject = subjectId;
+					if (!this._selectSubjectFromDeepLink(subjectId)) {
+						this._setBanner('error',
+							'The linked Detox patient could not be opened in the task editor.');
+						this._setStatus('Select a linked patient to start an edit session.');
+					}
+				})
+				.fail((xhr) => {
+					let message = 'The ONS-linked patient could not be resolved.';
+					if (xhr && xhr.status === 404)
+						message = 'No Detox patient is linked to this ONS record yet.';
+					else if (xhr && xhr.status === 403)
+						message = 'You do not have access to open this linked Detox patient.';
+					this._setBanner('error', message);
+					this._setStatus('Select a linked patient to start an edit session.');
+				});
+			return true;
+		}
+		return false;
+	}
+
+	_selectSubjectFromDeepLink(subjectId) {
+		if (!subjectId || !this._subjectMap[subjectId])
+			return false;
+		this._deepLinkApplied = true;
+		this._subjectSelect.val(subjectId);
+		this._onSubjectChanged();
+		return true;
 	}
 
 	_onSubjectChanged() {
