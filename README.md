@@ -34,3 +34,7 @@ This repository is based on a fork of the SenSeeAct platform, originally develop
 While SenSeeAct provides the technical foundation (secure backend, mobile/web integration, and data handling), this repository has been adapted and extended specifically for the Detox@Home context.
 
 More info about SenSeeAct: https://www.senseeact.com/
+
+## Documentation
+
+- [Firebase Cloud Messaging setup for Detox task sync](docs/firebase-cloud-messaging-task-sync.md)
