@@ -637,6 +637,35 @@ public class ProjectControllerExecution {
 		return null;
 	}
 
+	public Object getDetoxSubjectRecords(ProtocolVersion version,
+			Database authDb, Database db, User user, BaseProject project,
+			String table, String subject, String start, String end,
+			HttpServletRequest request, HttpServletResponse response)
+			throws HttpException, Exception {
+		List<? extends DatabaseObject> records = getRecords(version, authDb,
+				db, user, project, table, subject, start, end, request);
+		response.setContentType("application/json");
+		try (Writer writer = new OutputStreamWriter(response.getOutputStream(),
+				StandardCharsets.UTF_8)) {
+			writer.write("[");
+			DatabaseObjectMapper dbMapper = new DatabaseObjectMapper();
+			ObjectMapper jsonMapper = new ObjectMapper();
+			boolean first = true;
+			for (DatabaseObject record : records) {
+				if (!first)
+					writer.write(",");
+				else
+					first = false;
+				Map<String,Object> map = dbMapper.objectToMap(record, true);
+				map = addTaskSyncCompatMetadata(map);
+				String json = jsonMapper.writeValueAsString(map);
+				writer.write(json);
+			}
+			writer.write("]");
+		}
+		return null;
+	}
+
 	public static List<? extends DatabaseObject> getRecords(
 			ProtocolVersion version, Database authDb, Database db, User user,
 			BaseProject project, String table, String subject, String start,
@@ -671,6 +700,41 @@ public class ProjectControllerExecution {
 			else
 				compatUser = subjectUser.getEmail();
 			PropertyWriter.writeProperty(record, "user", compatUser);
+		}
+	}
+
+	private Map<String,Object> addTaskSyncCompatMetadata(Map<String,Object> map) {
+		Map<String,Object> result = new LinkedHashMap<>(map);
+		Object id = result.get("id");
+		if (id != null) {
+			result.putIfAbsent("_id", id);
+			result.putIfAbsent("recordId", id);
+		}
+		String createdAt = utcTimeToIsoString(result.get("utcTime"));
+		if (createdAt != null) {
+			result.putIfAbsent("createdAt", createdAt);
+			result.putIfAbsent("timestamp", createdAt);
+			result.putIfAbsent("_created", createdAt);
+		}
+		return result;
+	}
+
+	private String utcTimeToIsoString(Object utcTime) {
+		if (utcTime == null)
+			return null;
+		try {
+			long epochMillis;
+			if (utcTime instanceof Number) {
+				epochMillis = ((Number)utcTime).longValue();
+			} else {
+				String s = utcTime.toString().trim();
+				if (s.isEmpty())
+					return null;
+				epochMillis = Long.parseLong(s);
+			}
+			return Instant.ofEpochMilli(epochMillis).toString();
+		} catch (Exception ex) {
+			return null;
 		}
 	}
 
