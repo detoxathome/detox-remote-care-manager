@@ -1,0 +1,129 @@
+<link rel="stylesheet" type="text/css" href="../css/pages/me/tasks.css"></link>
+<div class="fill-space remote-task-page">
+	<div class="page-back-header"></div>
+	<div class="form remote-task-shell">
+		<div class="remote-task-toolbar">
+			<div class="remote-task-toolbar-main">
+				<div class="remote-task-toolbar-title">Remote task editor</div>
+				<div class="remote-task-toolbar-subtitle">
+					Fetch the latest task set from the linked phone before editing, then publish an append-only web snapshot.
+				</div>
+			</div>
+			<div class="remote-task-toolbar-actions">
+				<button id="remote-task-refresh-app" class="secondary-button">Refresh from app</button>
+				<button id="remote-task-reload-latest" class="secondary-button">Reload latest</button>
+				<button id="remote-task-discard-draft" class="secondary-button">Discard draft</button>
+				<button id="remote-task-publish">Publish to patient</button>
+			</div>
+		</div>
+
+		<div class="form-row remote-task-subject-row">
+			<div class="form-label">Patient</div>
+			<div class="form-value">
+				<select id="remote-task-subject-select"></select>
+			</div>
+		</div>
+
+		<div id="remote-task-status" class="caption"></div>
+		<div id="remote-task-banner" class="message" style="display: none"></div>
+
+		<div class="remote-task-main">
+			<div class="remote-task-list-pane">
+				<div class="remote-task-pane-header">
+					<div>
+						<div class="remote-task-pane-title">Tasks</div>
+						<div class="remote-task-pane-subtitle" id="remote-task-list-summary"></div>
+					</div>
+					<div class="remote-task-list-actions">
+						<button id="remote-task-add" class="secondary-button">Add</button>
+						<button id="remote-task-duplicate" class="secondary-button">Duplicate</button>
+						<button id="remote-task-delete" class="secondary-button">Delete</button>
+					</div>
+				</div>
+				<div id="remote-task-list" class="remote-task-list"></div>
+			</div>
+
+			<div class="remote-task-detail-pane">
+				<div class="remote-task-pane-header">
+					<div>
+						<div class="remote-task-pane-title">Task details</div>
+						<div class="remote-task-pane-subtitle" id="remote-task-detail-summary"></div>
+					</div>
+					<div class="remote-task-list-actions">
+						<button id="remote-task-move-up" class="secondary-button">Move up</button>
+						<button id="remote-task-move-down" class="secondary-button">Move down</button>
+					</div>
+				</div>
+
+				<div id="remote-task-empty" class="caption">
+					Select a patient and choose a task to edit.
+				</div>
+
+				<div id="remote-task-detail-form" style="display: none">
+					<div class="remote-task-form-grid">
+						<div class="remote-task-field">
+							<label for="remote-task-name">Taaknaam</label>
+							<input id="remote-task-name" type="text" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-request-text">Vraagtekst</label>
+							<input id="remote-task-request-text" type="text" />
+						</div>
+						<div class="remote-task-field remote-task-field-wide">
+							<label for="remote-task-description">Omschrijving</label>
+							<textarea id="remote-task-description" rows="4"></textarea>
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-dialogue-id">Digital Guide gesprek</label>
+							<input id="remote-task-dialogue-id" type="text" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-trigger-type">Voorkeurstrigger</label>
+							<select id="remote-task-trigger-type">
+								<option value="FIXED_TIME">Vaste tijd</option>
+								<option value="STATE_BASED">Toestand</option>
+							</select>
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-fixed-time">Vaste tijd</label>
+							<input id="remote-task-fixed-time" type="time" step="1" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-state-start">State from</label>
+							<input id="remote-task-state-start" type="time" step="1" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-state-end">State until</label>
+							<input id="remote-task-state-end" type="time" step="1" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-state">Required state</label>
+							<select id="remote-task-state">
+								<option value=""></option>
+								<option value="Rest">Rest</option>
+								<option value="Deviating">Deviating</option>
+								<option value="Other">Other</option>
+								<option value="ErrorUnknown">ErrorUnknown</option>
+							</select>
+						</div>
+						<div class="remote-task-field remote-task-field-checkbox">
+							<label for="remote-task-answerable-watch">Answerable on watch</label>
+							<input id="remote-task-answerable-watch" type="checkbox" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-max-per-day">Maximum per day</label>
+							<input id="remote-task-max-per-day" type="number" min="0" />
+						</div>
+						<div class="remote-task-field">
+							<label for="remote-task-min-interval">Minimum interval (minutes)</label>
+							<input id="remote-task-min-interval" type="number" min="0" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	loadJS('pages/me/tasks');
+</script>
