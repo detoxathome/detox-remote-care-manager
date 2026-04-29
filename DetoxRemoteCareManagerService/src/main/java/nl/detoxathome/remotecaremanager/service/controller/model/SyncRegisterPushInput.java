@@ -149,7 +149,14 @@ public class SyncRegisterPushInput {
 			Map<String,?> params = HttpContentReader.readJsonParams(request,
 					false);
 			MapReader paramReader = new MapReader(params);
-			result.fcmToken = paramReader.readString("fcmToken");
+			Object tokenObj = params.get("fcmToken");
+			if (tokenObj == null)
+				tokenObj = params.get("token");
+			if (tokenObj == null || tokenObj.toString().isBlank()) {
+				throw new ParseException(
+						"Property fcmToken (or token) not found");
+			}
+			result.fcmToken = tokenObj.toString().trim();
 			result.deviceId = paramReader.readString("deviceId");
 			result.restrictions = new SyncTableRestriction();
 			result.restrictions.setIncludeTables(paramReader.readJson(

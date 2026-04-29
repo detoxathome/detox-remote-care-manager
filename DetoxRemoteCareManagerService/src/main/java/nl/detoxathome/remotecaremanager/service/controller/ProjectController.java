@@ -334,6 +334,31 @@ public class ProjectController {
 						table, subject, start, end, null, response),
 				versionName, project, request, response);
 	}
+
+	@RequestMapping(value="/{project}/detox-subject/{subject}/table/{table}",
+			method=RequestMethod.GET)
+	public void getDetoxSubjectRecords(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@PathVariable("subject")
+			String subject,
+			@PathVariable("table")
+			String table,
+			@RequestParam(value="start", required=false, defaultValue="")
+			String start,
+			@RequestParam(value="end", required=false, defaultValue="")
+			String end) throws HttpException, Exception {
+		QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, baseProject) ->
+				exec.getDetoxSubjectRecords(version, authDb, projectDb, user,
+						baseProject, table, subject, start, end, null, response),
+				versionName, project, request, response);
+	}
 	
 	@RequestMapping(value="/{project}/table/{table}/filter/get",
 			method=RequestMethod.POST)
@@ -413,6 +438,35 @@ public class ProjectController {
 			String table,
 			@RequestParam(value="user", required=false, defaultValue="")
 			String subject) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, baseProject) ->
+				exec.insertRecords(version, request, authDb, projectDb, user,
+						baseProject, table, subject),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/{project}/detox-subject/{subject}/table/{table}",
+			method=RequestMethod.POST)
+	@RequestBody(
+		content = {
+			@Content(
+				mediaType = "application/json",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	public List<String> insertDetoxSubjectRecords(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@PathVariable("subject")
+			String subject,
+			@PathVariable("table")
+			String table) throws HttpException, Exception {
 		return QueryRunner.runProjectQuery(
 				(version, authDb, projectDb, user, baseProject) ->
 				exec.insertRecords(version, request, authDb, projectDb, user,
