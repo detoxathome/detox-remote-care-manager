@@ -46,7 +46,7 @@ class MyRemoteCareManagerPage {
 		if (this._user.role == 'ADMIN' || this._user.role == 'PROFESSIONAL') {
 			widget = this.createDashboardWidget(
 				'images/icon_pencil.svg',
-				'Remote task editor',
+				i18next.t('remote_task_editor'),
 				basePath + '/me/tasks');
 			this.addDashboardWidget(widget);
 		}
