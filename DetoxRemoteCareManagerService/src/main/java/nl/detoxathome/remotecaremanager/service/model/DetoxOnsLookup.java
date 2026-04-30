@@ -1,0 +1,80 @@
+package nl.detoxathome.remotecaremanager.service.model;
+
+import nl.detoxathome.remotecaremanager.dao.BaseDatabaseObject;
+import nl.detoxathome.remotecaremanager.dao.Database;
+import nl.detoxathome.remotecaremanager.dao.DatabaseCriteria;
+import nl.detoxathome.remotecaremanager.dao.DatabaseField;
+import nl.detoxathome.remotecaremanager.dao.DatabaseType;
+import nl.rrd.utils.exception.DatabaseException;
+
+/**
+ * Lookup table entry to map an SSA ID to an ONS ID.
+ *
+ * @author Dennis Hofs (RRD)
+ */
+public class DetoxOnsLookup extends BaseDatabaseObject {
+	@DatabaseField(value=DatabaseType.STRING, index=true)
+	private String ssaId;
+
+	@DatabaseField(value=DatabaseType.INT)
+	private int onsId;
+
+	public String getSsaId() {
+		return ssaId;
+	}
+
+	public void setSsaId(String ssaId) {
+		this.ssaId = ssaId;
+	}
+
+	public int getOnsId() {
+		return onsId;
+	}
+
+	public void setOnsId(int onsId) {
+		this.onsId = onsId;
+	}
+
+	public static DetoxOnsLookup findBySsaId(Database authDb, String ssaId)
+			throws DatabaseException {
+		DatabaseCriteria criteria = new DatabaseCriteria.Equal("ssaId", ssaId);
+		return authDb.selectOne(new DetoxOnsLookupTable(), criteria, null);
+	}
+
+	public static DetoxOnsLookup findByOnsId(Database authDb, int onsId)
+			throws DatabaseException {
+		DatabaseCriteria criteria = new DatabaseCriteria.Equal("onsId", onsId);
+		return authDb.selectOne(new DetoxOnsLookupTable(), criteria, null);
+	}
+
+	public static Integer findOnsId(Database authDb, String ssaId)
+			throws DatabaseException {
+		DetoxOnsLookup lookup = findBySsaId(authDb, ssaId);
+		if (lookup == null)
+			return null;
+		return lookup.getOnsId();
+	}
+
+	public static String findSsaId(Database authDb, int onsId)
+			throws DatabaseException {
+		DetoxOnsLookup lookup = findByOnsId(authDb, onsId);
+		if (lookup == null)
+			return null;
+		return lookup.getSsaId();
+	}
+
+	public static DetoxOnsLookup save(Database authDb, String ssaId, int onsId)
+			throws DatabaseException {
+		DetoxOnsLookup lookup = findBySsaId(authDb, ssaId);
+		if (lookup == null) {
+			lookup = new DetoxOnsLookup();
+			lookup.setSsaId(ssaId);
+			lookup.setOnsId(onsId);
+			authDb.insert(DetoxOnsLookupTable.NAME, lookup);
+		} else {
+			lookup.setOnsId(onsId);
+			authDb.update(DetoxOnsLookupTable.NAME, lookup);
+		}
+		return lookup;
+	}
+}
