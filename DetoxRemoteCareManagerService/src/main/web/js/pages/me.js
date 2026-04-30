@@ -1,8 +1,8 @@
-class MySenSeeActPage {
+class MyRemoteCareManagerPage {
 	/**
 	 * Properties:
 	 * 
-	 * - _user (SenSeeAct user object)
+	 * - _user (remote care manager user object)
 	 * - _logoutWidget
 	 */
 
@@ -28,7 +28,7 @@ class MySenSeeActPage {
 		background.render();
 
 		let header = new PageBackHeader($('.page-back-header'));
-		header.title = i18next.t('my_senseeact');
+		header.title = i18next.t('my_remote_care_manager');
 		header.render();
 
 		let widget = this.createDashboardWidget(
@@ -107,7 +107,7 @@ class MySenSeeActPage {
 	}
 
 	_onLogoutClick(clickId) {
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		var self = this;
 		client.logout()
 			.done(function(result) {

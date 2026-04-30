@@ -7,7 +7,7 @@ group = 'nl.rrd'
 version = 6.0
 
 base {
-	archivesName = 'senseeact-client'
+	archivesName = 'detox-client'
 }
 
 java {

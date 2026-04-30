@@ -203,7 +203,7 @@ class SignupPage {
 			return;
 		}
 		var self = this;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		client.signup(email, password, 'default')
 			.done(function(result) {
 				self._onSignupDone(clickId, profile);
@@ -249,7 +249,7 @@ class SignupPage {
 			return;
 		}
 		var self = this;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		client.updateUser(null, profile)
 			.done(function(result) {
 				self._onUpdateUserDone(clickId);

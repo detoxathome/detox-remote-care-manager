@@ -74,7 +74,7 @@ class LoginPage {
 
 	_onLoginClick(clickId) {
 		this._error.hide();
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		let email = this._emailEdit.textInput.val().trim();
 		let password = this._passwordEdit.textInput.val();
 		var self = this;
@@ -233,7 +233,7 @@ class LoginPage {
 	}
 
 	_handleMfaVerifyFail(error) {
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		if (error == 'invalid_code' || client.hasInvalidInputField(error,
 				'code')) {
 			this._mfaVerifyCodeEdit.showError();

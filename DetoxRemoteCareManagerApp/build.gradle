@@ -7,7 +7,7 @@ group = 'nl.rrd'
 version = '6.1.0' // run updateVersion after changing this property
 
 base {
-	archivesName = 'example-senseeact-service'
+	archivesName = 'detox-remote-care-manager-app'
 }
 
 def workspaceDir = rootProject.projectDir.parentFile
@@ -62,15 +62,15 @@ tasks.register('updateVersion') {
 
 	doLast() {
 		ant.replaceregexp(file: 'src/main/webapp/WEB-INF/web.xml',
-			match: "<display-name>SenSeeAct .+</display-name>",
-			replace: "<display-name>SenSeeAct ${version}</display-name>")
+			match: "<display-name>Detox Remote Care Manager .+</display-name>",
+			replace: "<display-name>Detox Remote Care Manager ${version}</display-name>")
 		ant.replaceregexp(file: 'src/main/resources/deployment.properties',
 			match: "version=.+",
 			replace: "version=${version}")
-		ant.replaceregexp(file: 'docker/senseeacttomcat/Dockerfile',
-			match: "example-senseeact-service-[0-9\\.]+\\.war",
-			replace: "example-senseeact-service-${version}.war")
-		ant.replaceregexp(file: 'docker/senseeactweb/Dockerfile',
+		ant.replaceregexp(file: 'docker/detoxrcm-tomcat/Dockerfile',
+			match: "detox-remote-care-manager-app-[0-9\\.]+\\.war",
+			replace: "detox-remote-care-manager-app-${version}.war")
+		ant.replaceregexp(file: 'docker/detoxrcm-web/Dockerfile',
 			match: "(\\\\/servlets\\\\/detoxrcm\\\\/)v[0-9\\.]+'",
 			replace: "\\1v${version}'")
 		def envs = ['dev', 'prod']
@@ -125,31 +125,31 @@ tasks.register('dockerDevBuild') {
 	doLast {
 		def gitDir = workspaceDir
 
-		// build senseeacttomcat
+		// build detoxrcm-tomcat
 		copy {
-			from 'docker/senseeacttomcat/Dockerfile.dockerignore'
+			from 'docker/detoxrcm-tomcat/Dockerfile.dockerignore'
 			into '../..'
 			rename '.*', '.dockerignore'
 		}
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
-				'build', '-t', 'senseeacttomcat',
-				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/senseeacttomcat/Dockerfile",
+				'build', '-t', 'detoxrcm-tomcat',
+				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/Dockerfile",
 				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/DetoxRemoteCareManagerApp/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
 			runShell(cmd, gitDir)
 
-			// build senseeactweb
+			// build detoxrcm-web
 			copy {
-				from 'docker/senseeactweb/Dockerfile.dockerignore'
+				from 'docker/detoxrcm-web/Dockerfile.dockerignore'
 				into '../..'
 				rename '.*', '.dockerignore'
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
-				'build', '-t', 'senseeactweb:dev', '--target', 'dev',
-				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/senseeactweb/Dockerfile",
+				'build', '-t', 'detoxrcm-web:dev', '--target', 'dev',
+				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/detoxrcm-web/Dockerfile",
 				'.']
 			runShell(cmd, gitDir)
 
@@ -168,7 +168,7 @@ tasks.register('dockerDevBuild') {
 
 tasks.register('dockerDevStart') {
 	group = 'docker'
-	description = 'Start SenSeeAct dev in Docker'
+	description = 'Start Detox Remote Care Manager dev in Docker'
 	
 	doLast {
 		copy {
@@ -205,31 +205,31 @@ tasks.register('dockerBuild') {
 		def m = pattern.matcher(webUrl)
 		def webPath = m[0][1]
 
-		// build senseeacttomcat
+		// build detoxrcm-tomcat
 		copy {
-			from 'docker/senseeacttomcat/Dockerfile.dockerignore'
+			from 'docker/detoxrcm-tomcat/Dockerfile.dockerignore'
 			into '../..'
 			rename '.*', '.dockerignore'
 		}
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
-				'build', '-t', 'senseeacttomcat:' + project.properties.dockerTag,
-				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/senseeacttomcat/Dockerfile",
+				'build', '-t', 'detoxrcm-tomcat:' + project.properties.dockerTag,
+				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/Dockerfile",
 				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/DetoxRemoteCareManagerApp/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
 			runShell(cmd, gitDir)
 
-			// build senseeactweb
+			// build detoxrcm-web
 			copy {
-				from 'docker/senseeactweb/Dockerfile.dockerignore'
+				from 'docker/detoxrcm-web/Dockerfile.dockerignore'
 				into '../..'
 				rename '.*', '.dockerignore'
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
-				'build', '-t', 'senseeactweb:' + project.properties.dockerTag,
-				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/senseeactweb/Dockerfile",
+				'build', '-t', 'detoxrcm-web:' + project.properties.dockerTag,
+				'-f', "${repoDirName}/DetoxRemoteCareManagerApp/docker/detoxrcm-web/Dockerfile",
 				'--build-arg', 'WEB_PATH=' + webPath,
 				'.']
 			runShell(cmd, gitDir)
@@ -272,7 +272,7 @@ tasks.register('buildDockerCompose') {
 tasks.register('dockerStart') {
 	dependsOn 'buildDockerCompose'
 	group = 'docker'
-	description = 'Start SenSeeAct in Docker'
+	description = 'Start Detox Remote Care Manager in Docker'
 	
 	doLast {
 		def dir = file('build/docker-compose')
@@ -297,7 +297,7 @@ tasks.register('dockerStart') {
 
 tasks.register('dockerStop') {
 	group = 'docker'
-	description = 'Stop SenSeeAct in Docker'
+	description = 'Stop Detox Remote Care Manager in Docker'
 
 	doLast {
 		def composeDir = file('build/docker-compose')

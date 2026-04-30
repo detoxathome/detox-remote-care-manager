@@ -16,7 +16,8 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * The main entry point for the SenSeeAct Service as a Spring Boot Application.
+ * The main entry point for the Detox Remote Care Manager service as a Spring
+ * Boot application.
  * 
  * @author Dennis Hofs (RRD)
  */

@@ -163,7 +163,7 @@ class MenuController {
 	}
 
 	_onLogoutClick(clickId) {
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		var self = this;
 		animator.onAnimatedClickHandlerCompleted(clickId, true);
 		client.logout()

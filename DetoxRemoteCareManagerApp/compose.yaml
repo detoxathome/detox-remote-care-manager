@@ -1,21 +1,21 @@
 services:
-    senseeacttomcat:
-        image: senseeacttomcat:$DOCKER_TAG
+    detoxrcm-tomcat:
+        image: detoxrcm-tomcat:$DOCKER_TAG
         ports:
             - 10002:8080
             - 10003:8009
         volumes:
-            - $LOG_DIR:/var/log/senseeact
+            - $LOG_DIR:/var/log/detoxrcm
         restart: unless-stopped
-    senseeactweb:
-        image: senseeactweb:$DOCKER_TAG
+    detoxrcm-web:
+        image: detoxrcm-web:$DOCKER_TAG
         volumes:
             - phpmyadmin-data:/var/www/phpmyadmin
         ports:
             - 10000:80
             - 10001:8081
         restart: unless-stopped
-    senseeactdb:
+    detoxrcm-db:
         image: mariadb:11
         volumes:
             - mysql-data:/var/lib/mysql
@@ -29,7 +29,7 @@ services:
         volumes:
             - phpmyadmin-data:/var/www/html
         environment:
-            PMA_HOST: senseeactdb
+            PMA_HOST: detoxrcm-db
         restart: unless-stopped
 
 volumes:

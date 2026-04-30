@@ -4,7 +4,7 @@ class DefaultMenuController {
 			i18next.t('home'),
 			basePath + '/');
 		menuController.appendMenuItem('me',
-			i18next.t('my_senseeact'),
+			i18next.t('my_remote_care_manager'),
 			basePath + '/me');
 		menuController.appendSubMenuItem('me', 'me-account',
 			i18next.t('my_account'),

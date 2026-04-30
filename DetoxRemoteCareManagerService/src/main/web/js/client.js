@@ -1,4 +1,4 @@
-class SenSeeActClient {
+class RemoteCareManagerClient {
 	/**
 	 * Calls endpoint POST /auth/login.
 	 */

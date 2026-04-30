@@ -2,7 +2,7 @@ class MyAccountPage {
 	/**
 	 * Properties:
 	 * 
-	 * - _user (SenSeeAct user object)
+	 * - _user (remote care manager user object)
 	 * - _logoutButton (jQuery element)
 	 */
 	constructor() {
@@ -77,7 +77,7 @@ class MyAccountPage {
 	updateUser(updateUserFunction) {
 		let newUser = JSON.parse(JSON.stringify(this._user));
 		updateUserFunction(newUser);
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		let xhr = client.updateUser(null, newUser);
 		var self = this;
 		xhr.done((result) => {

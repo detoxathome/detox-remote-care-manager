@@ -19,7 +19,7 @@ public abstract class SenSeeActEmailTemplate extends EmailTemplate {
 		Configuration config = AppComponents.get(Configuration.class);
 		String webBase = config.get(Configuration.WEB_URL);
 		String html = readHtmlContent(request, user,
-				"mail_templates/senseeact_mail_template");
+				"mail_templates/remote_care_manager_mail_template");
 		String contentHtml = getHtmlMailContent(request, user, params);
 		html = html.replaceAll("\\{content\\}", contentHtml);
 		html = html.replaceAll("\\{web-base\\}", webBase);

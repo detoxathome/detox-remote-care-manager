@@ -7,7 +7,7 @@ group = 'nl.rrd'
 version = '6.1.0'
 
 base {
-	archivesName = 'senseeact-service'
+	archivesName = 'detox-remote-care-manager-service'
 }
 
 java {

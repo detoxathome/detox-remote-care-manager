@@ -5,7 +5,7 @@ import nl.rrd.utils.exception.ParseException;
 import nl.rrd.utils.http.HttpURL;
 
 public class SenSeeActContext {
-	public static final String LOGTAG = "SenSeeActService";
+	public static final String LOGTAG = "DetoxRemoteCareManagerService";
 
 	private static String currentVersion = null;
 
@@ -15,7 +15,7 @@ public class SenSeeActContext {
 
 	/**
 	 * Returns the base URL. For example:<br />
-	 * https://www.example.com/servlets/senseeact
+	 * https://www.example.com/servlets/detoxrcm
 	 * 
 	 * @return the base URL
 	 */
@@ -26,7 +26,7 @@ public class SenSeeActContext {
 	
 	/**
 	 * Returns the base path. For example:<br />
-	 * /servlets/senseeact
+	 * /servlets/detoxrcm
 	 * 
 	 * @return the base path
 	 */

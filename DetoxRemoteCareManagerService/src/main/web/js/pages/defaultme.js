@@ -1,2 +1,2 @@
-mePage = new MySenSeeActPage();
+mePage = new MyRemoteCareManagerPage();
 mePage.start();

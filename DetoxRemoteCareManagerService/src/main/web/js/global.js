@@ -259,7 +259,7 @@ function checkLogin(onSuccess, redirectOnFail = true) {
 		path += '?' + url.paramsString;
 	if (url.anchor && url.anchor.length > 0)
 		path += '#' + url.anchor;
-	let client = new SenSeeActClient();
+	let client = new RemoteCareManagerClient();
 	client.getUser()
 		.done(function(data) {
 			onSuccess(data);

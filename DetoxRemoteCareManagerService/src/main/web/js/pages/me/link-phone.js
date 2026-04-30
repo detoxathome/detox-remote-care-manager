@@ -1,7 +1,7 @@
 class LinkPhonePage {
 	/**
 	 * Properties:
-	 * - _user (SenSeeAct user object)
+	 * - _user (remote care manager user object)
 	 * - _onsIdEdit (TextEdit)
 	 * - _projectEdit (TextEdit)
 	 * - _submitButton (jQuery element)
@@ -141,7 +141,7 @@ class LinkPhonePage {
 	}
 
 	_onGenerateFail(clickId, xhr) {
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		let error = 'unexpected_error';
 		if (client.hasInvalidInputField(xhr, 'onsId')) {
 			error = 'link_phone_invalid_ons_id';
@@ -182,7 +182,7 @@ class LinkPhonePage {
 			self._runSignup(clickId, onsId, project);
 		})
 		.fail(function(xhr, status, error) {
-			let client = new SenSeeActClient();
+			let client = new RemoteCareManagerClient();
 			if (client.hasInvalidInputField(xhr, 'onsId')) {
 				animator.onAnimatedClickHandlerCompleted(clickId, {
 					success: false,

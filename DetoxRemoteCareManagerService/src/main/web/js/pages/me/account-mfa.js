@@ -456,7 +456,7 @@ class MyAccountMfaForm {
 		if (dlg != this._addDialogue)
 			return;
 		this._totpVerifyRunning = false;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		if (xhr.status == 400 && xhr.responseJSON) {
 			if (xhr.responseJSON.code == 'AUTH_MFA_TYPE_MAX') {
 				this._showErrorCard(dlg, 'mfa-totp-max-card');

@@ -1,6 +1,6 @@
 # Build from git directory:
-# docker build -t senseeacttomcat \
-#     -f detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeacttomcat/Dockerfile \
+# docker build -t detoxrcm-tomcat \
+#     -f detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/Dockerfile \
 #     --build-arg GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json \
 #     --build-arg TOMCAT_ADMIN_USERNAME=admin \
 #     --build-arg TOMCAT_ADMIN_PASSWORD=secret \
@@ -21,8 +21,8 @@ ARG TOMCAT_ADMIN_PASSWORD
 COPY --from=build /app/google-application-credentials.json /app/
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/google-application-credentials.json
 WORKDIR $CATALINA_HOME
-COPY --from=build /app/detox-remote-care-manager/DetoxRemoteCareManagerApp/build/libs/example-senseeact-service-6.1.0.war webapps/servlets#detoxrcm.war
-COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeacttomcat/tomcat-users.xml conf/
+COPY --from=build /app/detox-remote-care-manager/DetoxRemoteCareManagerApp/build/libs/detox-remote-care-manager-app-6.1.0.war webapps/servlets#detoxrcm.war
+COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/tomcat-users.xml conf/
 RUN sed -i -e "s/\${TOMCAT_ADMIN_USERNAME}/$TOMCAT_ADMIN_USERNAME/" \
 	-e "s/\${TOMCAT_ADMIN_PASSWORD}/$TOMCAT_ADMIN_PASSWORD/" \
 	conf/tomcat-users.xml
@@ -32,5 +32,5 @@ RUN start=`grep -n -m 1 "<Connector protocol=\"AJP/1.3\"" conf/server.xml | sed 
 	sed -i -e "${start},${end}d" conf/server.xml && \
 	sed -i -e "${start}i <Connector protocol=\"AJP/1.3\" address=\"0.0.0.0\" port=\"8009\" redirectPort=\"8443\" secretRequired=\"false\" />" conf/server.xml
 RUN	cp -r webapps.dist/* webapps
-COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeacttomcat/context.xml webapps/manager/META-INF/
+COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/context.xml webapps/manager/META-INF/
 EXPOSE 8009

@@ -79,7 +79,7 @@ class MyAccountAuthForm {
 		let xhr = this._accountPage.updateUser((user) => {
 			user.email = value;
 		});
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		xhr.fail((xhr, status, error) => {
 			if (client.hasInvalidInputField(xhr, 'email')) {
 				edit.showError(i18next.t('invalid_email_address'));
@@ -185,7 +185,7 @@ class MyAccountAuthForm {
 			return;
 		}
 		var self = this;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		client.changePassword(validation.oldPassword, validation.newPassword)
 		.done(() => {
 			self._onChangePasswordDone(clickId);
@@ -249,7 +249,7 @@ class MyAccountAuthForm {
 		let valueDiv = $('#password-value');
 		valueDiv.find('input').removeClass('error');
 		let errorDiv = valueDiv.find('.password-error');
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		if (client.hasInvalidInputField(xhr, 'oldPassword')) {
 			oldInput.addClass('error');
 			oldInput.trigger('focus');
@@ -263,7 +263,7 @@ class MyAccountAuthForm {
 
 	_onChangePasswordDone(clickId) {
 		var self = this;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		client.getUser()
 		.done((result) => {
 			self._onChangePasswordGetUserDone(clickId, result);

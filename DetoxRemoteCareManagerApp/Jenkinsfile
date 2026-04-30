@@ -11,13 +11,13 @@ pipeline {
 				branch 'jenkins-general-senseeact-dev'
 			}
 			steps {
-				dir('git/senseeact') {
+				dir('git/detox-remote-care-manager') {
 					sh 'mv `ls -d ../../* | grep -v "\\.\\./\\.\\./git"` .'
 				}
 				dir('git/rrd-utils') {
 					git url: 'https://github.com/RoessinghResearch/rrd-utils.git'
 				}
-				dir('git/senseeact/DetoxRemoteCareManagerApp') {
+				dir('git/detox-remote-care-manager/DetoxRemoteCareManagerApp') {
 					sh 'cp $GRADLE_PROPERTIES_DEV . && \
 						cp $GOOGLE_APPLICATION_CREDENTIALS google-application-credentials.json && \
 						chmod 755 gradlew && \
@@ -30,31 +30,31 @@ pipeline {
 				branch 'jenkins-general-senseeact-prod'
 			}
 			steps {
-				dir('git/senseeact') {
+				dir('git/detox-remote-care-manager') {
 					sh 'mv `ls -d ../../* | grep -v "\\.\\./\\.\\./git"` .'
 				}
 				dir('git/rrd-utils') {
 					git url: 'https://github.com/RoessinghResearch/rrd-utils.git'
 				}
-				dir('git/senseeact/DetoxRemoteCareManagerApp') {
+				dir('git/detox-remote-care-manager/DetoxRemoteCareManagerApp') {
 					sh 'cp $GRADLE_PROPERTIES_PROD . && \
 						cp $GOOGLE_APPLICATION_CREDENTIALS google-application-credentials.json && \
 						chmod 755 gradlew && \
 						./gradlew dockerBuild'
 				}
-				dir('git/senseeact/DetoxRemoteCareManagerApp') {
+				dir('git/detox-remote-care-manager/DetoxRemoteCareManagerApp') {
 					sh 'dockerTag=`grep "^dockerTag=" gradle.properties | tr -d "\r\n" | sed -e "s/^dockerTag=//"` && \
 						./gradlew buildDockerCompose && \
 						scp -r build/docker-compose jenkins@${SENSEEACT_PROD_HOST}:~ && \
-						docker save -o senseeact_docker_images.tar \
-						senseeacttomcat:$dockerTag senseeactweb:$dockerTag \
+						docker save -o detoxrcm_docker_images.tar \
+						detoxrcm-tomcat:$dockerTag detoxrcm-web:$dockerTag \
 						phpmyadmin:fpm-alpine mariadb:11 && \
-						scp senseeact_docker_images.tar jenkins@${SENSEEACT_PROD_HOST}:~'
+						scp detoxrcm_docker_images.tar jenkins@${SENSEEACT_PROD_HOST}:~'
 				}
-				dir('git/senseeact/DetoxRemoteCareManagerApp') {
+				dir('git/detox-remote-care-manager/DetoxRemoteCareManagerApp') {
 					sh 'dockerProject=`grep "^dockerProject=" gradle.properties | tr -d "\r\n" | sed -e "s/^dockerProject=//"` && \
 						ssh jenkins@${SENSEEACT_PROD_HOST} \
-						"docker load --input senseeact_docker_images.tar && \
+						"docker load --input detoxrcm_docker_images.tar && \
 						cd docker-compose && \
 						docker compose -p $dockerProject up -d && \
 						docker image prune -f && \

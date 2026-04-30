@@ -18,5 +18,5 @@
 **/node_modules/
 detox-remote-care-manager/DataAccessObjects/gradle.properties
 detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/
-!detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeacttomcat/
+!detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-tomcat/
 detox-remote-care-manager/DetoxRemoteCareManagerApp/src/main/web/

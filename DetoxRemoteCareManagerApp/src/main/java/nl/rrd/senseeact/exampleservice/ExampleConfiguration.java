@@ -6,9 +6,9 @@ import nl.rrd.senseeact.service.Configuration;
 import java.net.URL;
 
 /**
- * Configuration of the SenSeeAct Service. This is initialised from resource
- * service.properties. Known property keys are defined as constants in this
- * class.
+ * Configuration of the Detox Remote Care Manager service. This is
+ * initialised from resource service.properties. Known property keys are
+ * defined as constants in this class.
  * 
  * @author Dennis Hofs (RRD)
  */

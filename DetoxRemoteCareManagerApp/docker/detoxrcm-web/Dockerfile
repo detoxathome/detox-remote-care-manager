@@ -1,9 +1,9 @@
 # Build from git directory:
-# docker build -t senseeactweb -f detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeactweb/Dockerfile .
+# docker build -t detoxrcm-web -f detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-web/Dockerfile .
 
 FROM httpd:2.4-alpine AS dev
 WORKDIR /usr/local/apache2
-COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeactweb/*.conf conf/extra/
+COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-web/*.conf conf/extra/
 RUN sed -i \
 	-e "s/^#\(LoadModule xml2enc_module\)/\1/" \
 	-e "s/^#\(LoadModule proxy_html_module\)/\1/" \
@@ -33,7 +33,7 @@ RUN chmod 755 gradlew && sed -i 's/\r//' gradlew && ./gradlew webBuild
 FROM httpd:2.4-alpine AS prod
 ARG WEB_PATH
 WORKDIR /usr/local/apache2
-COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeactweb/*.conf conf/extra/
+COPY detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-web/*.conf conf/extra/
 COPY --from=build /app/detox-remote-care-manager/DetoxRemoteCareManagerApp/build/web-src/ htdocs${WEB_PATH}/
 RUN sed -i \
 	-e "s|var basePath = '.*';|var basePath = '${WEB_PATH}';|" \

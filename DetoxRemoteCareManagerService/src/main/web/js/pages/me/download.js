@@ -22,7 +22,7 @@ class DownloadPage {
 
 	_onGetUserDone() {
 		this._createView();
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		var self = this;
 		client.getDownloadProjects()
 			.done(function(data) {
@@ -90,7 +90,7 @@ class DownloadPage {
 		if (minTime == null || now >= minTime) {
 			this._lastStartTime = now;
 			var self = this;
-			let client = new SenSeeActClient();
+			let client = new RemoteCareManagerClient();
 			client.startDownload(project)
 				.done(function() {
 					self._updateActiveDownloads(true);
@@ -104,7 +104,7 @@ class DownloadPage {
 
 	_updateActiveDownloads(showError = false) {
 		var self = this;
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		client.getDownloadList()
 			.done(function(data) {
 				self._onGetDownloadList(data);
@@ -221,7 +221,7 @@ class DownloadPage {
 	}
 
 	_onDeleteDownloadClick(item) {
-		let client = new SenSeeActClient();
+		let client = new RemoteCareManagerClient();
 		var self = this;
 		client.deleteDownload(item.id)
 			.done(function(data) {
