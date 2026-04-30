@@ -6455,7 +6455,7 @@ public class DetoxClient {
 		}
 		synchronized (lock) {
 			if (closed)
-				throw new IOException("RRDDetoxClient closed");
+				throw new IOException("DetoxClient closed");
 			activeClients.add(client);
 		}
 		return client;

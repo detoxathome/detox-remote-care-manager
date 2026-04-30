@@ -66,13 +66,13 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 	private static final String ONS_URL =
 			"https://api-staging.ons.io/v0/openehr_dossier/back_channel/unauthorized/composition_wrappers";
 	private static final String ONS_MTLS_CERT_PATH =
-			"/etc/senseeact/ons/client.pem";
+			"/etc/detoxrcm/ons/client.pem";
 	private static final String ONS_MTLS_KEY_PATH =
-			"/etc/senseeact/ons/client.key";
+			"/etc/detoxrcm/ons/client.key";
 	private static final String PROP_OUTGOING_URL =
-			"senseeact.detox.outgoing.url";
+			"detoxrcm.outgoing.url";
 	private static final String PROP_OUTGOING_MTLS =
-			"senseeact.detox.outgoing.mtls";
+			"detoxrcm.outgoing.mtls";
 	private static final int RETRY_INTERVAL = 15 * 60 * 1000;
 	private static final Object RETRY_TASK_LOCK = new Object();
 	private static final Set<String> RETRY_TASK_PROJECTS = new HashSet<>();

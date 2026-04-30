@@ -3,7 +3,7 @@ plugins {
 	id 'java-library'
 }
 
-group = 'nl.rrd'
+group = 'nl.detoxathome.remotecaremanager'
 version = '6.1.0'
 
 base {

@@ -3,7 +3,7 @@ plugins {
 	id 'org.springframework.boot' version '3.0.0'
 }
 
-group = 'nl.rrd'
+group = 'nl.detoxathome.remotecaremanager'
 version = '6.1.0' // run updateVersion after changing this property
 
 base {
@@ -382,14 +382,14 @@ def minimizeCss() {
 	cssDir.renameTo(tempCssDir)
 	cssDir.mkdir()
 	new File(tempCssDir, 'pages').renameTo(new File(cssDir, 'pages'))
-	def cssFile = new File(cssDir, 'senseeact.css')
+	def cssFile = new File(cssDir, 'detoxrcm.css')
 	cssFile.withOutputStream() {
 		mergeFileTree(tempCssDir, it)
 	}
 	project.delete(tempCssDir)
 	ensureWebTooling()
-	def cmd = ['npx', '--no-install', 'postcss', 'senseeact.css', '-o',
-		'senseeact.min.css']
+	def cmd = ['npx', '--no-install', 'postcss', 'detoxrcm.css', '-o',
+		'detoxrcm.min.css']
 	runShell(cmd, cssDir)
 	cssFile.delete()
 }
@@ -431,7 +431,7 @@ def minimizeJs() {
 		'widgets/progress-bar.js',
 		'widgets/text-edit.js'
 	]
-	minimizeJsFiles(jsDir, srcFiles, jsDir, 'senseeact.min.js', true)
+	minimizeJsFiles(jsDir, srcFiles, jsDir, 'detoxrcm.min.js', true)
 	deleteEmptyDirs(jsDir)
 }
 

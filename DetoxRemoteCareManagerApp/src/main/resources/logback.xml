@@ -6,7 +6,7 @@
 
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${dataDir}/log/senseeact.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<fileNamePattern>${dataDir}/log/detoxrcm.%d{yyyy-MM-dd}.log</fileNamePattern>
 		</rollingPolicy>
 
 		<encoder>

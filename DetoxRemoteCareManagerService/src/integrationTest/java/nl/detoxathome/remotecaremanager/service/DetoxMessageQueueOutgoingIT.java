@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DetoxMessageQueueOutgoingIT {
 	private static final String PROP_OUTGOING_URL =
-			"senseeact.detox.outgoing.url";
+			"detoxrcm.outgoing.url";
 	private static final String PROP_OUTGOING_MTLS =
-			"senseeact.detox.outgoing.mtls";
+			"detoxrcm.outgoing.mtls";
 
 	@Test
 	void sendsPayloadToOverrideEndpoint() throws Exception {

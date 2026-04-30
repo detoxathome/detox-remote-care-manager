@@ -13,8 +13,8 @@ public class DetoxMobileAppRepository extends MobileAppRepository {
 	protected List<MobileApp> getMobileApps() {
 		List<MobileApp> apps = new ArrayList<>();
 		apps.add(new MobileApp(
-				"senseeact",
-				"Detox",
+				"detoxrcm",
+				"Detox@Home",
 				"nl.detoxathome.remotecaremanager"));
 		return apps;
 	}
