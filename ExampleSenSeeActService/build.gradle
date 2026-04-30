@@ -71,7 +71,7 @@ tasks.register('updateVersion') {
 			match: "example-senseeact-service-[0-9\\.]+\\.war",
 			replace: "example-senseeact-service-${version}.war")
 		ant.replaceregexp(file: 'docker/senseeactweb/Dockerfile',
-			match: "(\\\\/servlets\\\\/senseeact\\\\/)v[0-9\\.]+'",
+			match: "(\\\\/servlets\\\\/detoxrcm\\\\/)v[0-9\\.]+'",
 			replace: "\\1v${version}'")
 		def envs = ['dev', 'prod']
 		for (env in envs) {
@@ -79,8 +79,8 @@ tasks.register('updateVersion') {
 				match: "var version = '[0-9\\.]+';",
 				replace: "var version = '${version}';")
 			ant.replaceregexp(file: "../SenSeeActService/src/main/web/index.${env}.html",
-				match: "'/servlets/senseeact/v[0-9\\.]+'",
-				replace: "'/servlets/senseeact/v${version}'")
+				match: "'/servlets/detoxrcm/v[0-9\\.]+'",
+				replace: "'/servlets/detoxrcm/v${version}'")
 		}
 	}
 }

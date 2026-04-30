@@ -39,7 +39,7 @@ COPY detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/*.con
 COPY --from=build /app/detox-remote-care-manager/ExampleSenSeeActService/build/web-src/ htdocs${WEB_PATH}/
 RUN sed -i \
 	-e "s|var basePath = '.*';|var basePath = '${WEB_PATH}';|" \
-	-e "s|var servicePath = '.*';|var servicePath = '/servlets/senseeact/v6.1.0';|" \
+	-e "s|var servicePath = '.*';|var servicePath = '/servlets/detoxrcm/v6.1.0';|" \
 	htdocs${WEB_PATH}/index.html && \
 	sed -i \
 	-e "s/\$WEB_PATH/$escapedWebPath/g" \

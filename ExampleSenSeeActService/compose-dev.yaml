@@ -16,7 +16,7 @@ services:
         image: senseeactweb:dev
         volumes:
             - phpmyadmin-data:/var/www/phpmyadmin
-            - ./build/web-src/:/usr/local/apache2/htdocs/senseeact
+            - ./build/web-src/:/usr/local/apache2/htdocs/detoxrcm
         ports:
             - 10000:80
             - 10001:8081
