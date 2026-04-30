@@ -14,6 +14,8 @@ class RemoteTaskEditorPage {
 		this._selectedTaskIndex = -1;
 		this._dirty = false;
 		this._stale = false;
+		this._busy = false;
+		this._editorLoaded = false;
 		this._baseRecordId = null;
 		this._latestRecordId = null;
 		this._currentSnapshot = null;
@@ -25,6 +27,10 @@ class RemoteTaskEditorPage {
 		this._deepLinkOnsInstance = null;
 		this._deepLinkResolved = false;
 		this._deepLinkApplied = false;
+		this._patientStepCard = $('#remote-task-step-patient');
+		this._refreshStepCard = $('#remote-task-step-refresh');
+		this._editStepCard = $('#remote-task-step-edit');
+		this._publishStepCard = $('#remote-task-step-publish');
 		this._status = $('#remote-task-status');
 		this._banner = $('#remote-task-banner');
 		this._subjectSelect = $('#remote-task-subject-select');
@@ -98,10 +104,11 @@ class RemoteTaskEditorPage {
 
 		$(window).on('beforeunload.remoteTaskEditor', () => {
 			if (this._selectedSubject && this._dirty)
-				return 'You have unsaved task edits.';
+				return 'You have non-published task changes.';
 			return undefined;
 		});
 
+		this._updateStepState();
 		this._applyUrlParams();
 	}
 
@@ -158,6 +165,7 @@ class RemoteTaskEditorPage {
 		}
 		if (!this._applyDeepLinkSelection())
 			this._setStatus('Select a linked patient to start an edit session.');
+		this._updateStepState();
 	}
 
 	_applyUrlParams() {
@@ -229,17 +237,18 @@ class RemoteTaskEditorPage {
 
 	_onSubjectChanged() {
 		let subjectId = this._subjectSelect.val();
+		if (this._dirty && this._selectedSubject !== subjectId &&
+				!window.confirm(
+					'Switching patients will lose all non-published changes for the current patient. Continue?')) {
+			this._subjectSelect.val(this._selectedSubject || '');
+			return;
+		}
 		if (!subjectId) {
 			this._selectedSubject = null;
 			this._selectedSubjectSummary = null;
 			this._stopWatching();
 			this._clearEditorState();
 			this._setStatus('Select a linked patient to start an edit session.');
-			return;
-		}
-		if (this._dirty && !window.confirm(
-				'Discard the current unsaved draft and load another patient?')) {
-			this._subjectSelect.val(this._selectedSubject || '');
 			return;
 		}
 		this._selectedSubject = subjectId;
@@ -252,7 +261,7 @@ class RemoteTaskEditorPage {
 		if (!this._selectedSubject)
 			return;
 		if (this._dirty && !window.confirm(
-				'Reloading from the app will replace the current draft. Continue?')) {
+				'Retrying the phone refresh will replace the current draft with the latest tasks from the linked phone. Continue?')) {
 			return;
 		}
 		this._clearStoredDraft(this._selectedSubject);
@@ -263,7 +272,7 @@ class RemoteTaskEditorPage {
 		if (!this._selectedSubject)
 			return;
 		if (this._dirty && !window.confirm(
-				'Reload the latest middleware snapshot and discard the current draft?')) {
+				'Open the latest middleware snapshot and lose all non-published changes in the current draft?')) {
 			return;
 		}
 		this._clearStoredDraft(this._selectedSubject);
@@ -283,6 +292,7 @@ class RemoteTaskEditorPage {
 
 	_startEditSession(subjectId, refreshFromApp) {
 		const generation = ++this._loadGeneration;
+		this._editorLoaded = false;
 		this._stopWatching();
 		this._startWatching(subjectId);
 		this._setBusy(true);
@@ -376,6 +386,7 @@ class RemoteTaskEditorPage {
 		this._currentSnapshot = record;
 		this._latestRecordId = record ? record.id : null;
 		this._baseRecordId = this._latestRecordId;
+		this._editorLoaded = true;
 		this._tasks = [];
 		this._selectedTaskIndex = -1;
 		this._dirty = false;
@@ -421,6 +432,7 @@ class RemoteTaskEditorPage {
 		this._renderTaskList();
 		this._renderDetail();
 		this._updateStatusText(requestToken);
+		this._updateStepState();
 	}
 
 	_renderTaskList() {
@@ -579,6 +591,7 @@ class RemoteTaskEditorPage {
 					this._stale = true;
 					this._storeDraft();
 					this._updateStatusText(null);
+					this._updateStepState();
 					this._setBanner('warning',
 						'A newer task snapshot was published while you were editing. Your draft has been preserved locally, but publish is blocked until you reload the latest version.');
 					return;
@@ -671,6 +684,7 @@ class RemoteTaskEditorPage {
 				if (Array.isArray(subjects) && subjects.length > 0) {
 					this._stale = true;
 					this._updateStatusText(null);
+					this._updateStepState();
 					this._setBanner('warning',
 						'A newer app or web task snapshot arrived while this editor was open. Reload latest before publishing.');
 				}
@@ -699,6 +713,7 @@ class RemoteTaskEditorPage {
 		this._dirty = true;
 		this._storeDraft();
 		this._updateStatusText(null);
+		this._updateStepState();
 	}
 
 	_storeDraft() {
@@ -738,11 +753,13 @@ class RemoteTaskEditorPage {
 		this._selectedTaskIndex = -1;
 		this._dirty = false;
 		this._stale = false;
+		this._editorLoaded = false;
 		this._baseRecordId = null;
 		this._latestRecordId = null;
 		this._currentSnapshot = null;
 		this._renderTaskList();
 		this._renderDetail();
+		this._updateStepState();
 	}
 
 	_updateStatusText(requestToken) {
@@ -782,6 +799,7 @@ class RemoteTaskEditorPage {
 	}
 
 	_setBusy(isBusy) {
+		this._busy = isBusy;
 		$('#remote-task-refresh-app').prop('disabled', isBusy);
 		$('#remote-task-reload-latest').prop('disabled', isBusy);
 		$('#remote-task-discard-draft').prop('disabled', isBusy);
@@ -792,6 +810,53 @@ class RemoteTaskEditorPage {
 		$('#remote-task-move-up').prop('disabled', isBusy);
 		$('#remote-task-move-down').prop('disabled', isBusy);
 		this._subjectSelect.prop('disabled', isBusy);
+		this._updateStepState();
+	}
+
+	_updateStepState() {
+		const hasSubject = !!this._selectedSubject;
+		const editReady = hasSubject && this._editorLoaded;
+		const publishReady = editReady && this._dirty && !this._stale &&
+			!this._busy;
+
+		let currentStep = 'patient';
+		if (publishReady)
+			currentStep = 'publish';
+		else if (editReady)
+			currentStep = 'edit';
+		else if (hasSubject)
+			currentStep = 'refresh';
+
+		this._setStepCardState(this._patientStepCard, true,
+			currentStep === 'patient');
+		this._setStepCardState(this._refreshStepCard, hasSubject,
+			currentStep === 'refresh');
+		this._setStepCardState(this._editStepCard, editReady,
+			currentStep === 'edit');
+		this._setStepCardState(this._publishStepCard, publishReady,
+			currentStep === 'publish');
+
+		if (!this._busy) {
+			$('#remote-task-refresh-app').prop('disabled', !hasSubject);
+			$('#remote-task-reload-latest').prop('disabled', !hasSubject);
+			$('#remote-task-discard-draft').prop('disabled', !editReady);
+			$('#remote-task-publish').prop('disabled', !publishReady);
+			$('#remote-task-add').prop('disabled', !editReady);
+			$('#remote-task-duplicate').prop('disabled',
+				!editReady || this._selectedTaskIndex < 0);
+			$('#remote-task-delete').prop('disabled',
+				!editReady || this._selectedTaskIndex < 0);
+			$('#remote-task-move-up').prop('disabled',
+				!editReady || this._selectedTaskIndex <= 0);
+			$('#remote-task-move-down').prop('disabled',
+				!editReady || this._selectedTaskIndex < 0 ||
+				this._selectedTaskIndex >= this._tasks.length - 1);
+		}
+	}
+
+	_setStepCardState(card, isActive, isCurrent) {
+		card.toggleClass('is-inactive', !isActive);
+		card.toggleClass('is-current', isCurrent);
 	}
 
 	_setStatus(message) {
