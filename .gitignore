@@ -5,4 +5,6 @@
 /**/node_modules/
 /**/package.json
 /**/package-lock.json
+!/ExampleDetoxRemoteCareManagerService/package.json
+!/ExampleDetoxRemoteCareManagerService/package-lock.json
 /local.properties

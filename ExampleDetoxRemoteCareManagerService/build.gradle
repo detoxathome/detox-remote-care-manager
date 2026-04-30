@@ -349,7 +349,9 @@ def prepareDevProdFiles(dir, isProd) {
 def buildWebFiles(isProd) {
 	def buildDir = file('build/web-src')
 	prepareDevProdFiles(buildDir, isProd)
-	def cmd = ['handlebars', 'templates', '-f', 'js/templates.js']
+	ensureWebTooling()
+	def cmd = ['npx', '--no-install', 'handlebars', 'templates', '-f',
+		'js/templates.js']
 	runShell(cmd, buildDir)
 }
 
@@ -385,7 +387,9 @@ def minimizeCss() {
 		mergeFileTree(tempCssDir, it)
 	}
 	project.delete(tempCssDir)
-	def cmd = ['npx', 'postcss', 'senseeact.css', '-o', 'senseeact.min.css']
+	ensureWebTooling()
+	def cmd = ['npx', '--no-install', 'postcss', 'senseeact.css', '-o',
+		'senseeact.min.css']
 	runShell(cmd, cssDir)
 	cssFile.delete()
 }
@@ -405,7 +409,8 @@ def minimizeJsFiles(srcDir, srcFiles, destDir, destFile,
 				srcFile.delete()
 		}
 	}
-	def cmd = ['uglifyjs', mergedName, '-o', destFile]
+	ensureWebTooling()
+	def cmd = ['npx', '--no-install', 'uglifyjs', mergedName, '-o', destFile]
 	runShell(cmd, destDir)
 	mergedFile.delete()
 }
@@ -439,6 +444,18 @@ def deleteEmptyDirs(dir) {
 		if (it.isDirectory())
 			deleteEmptyDirs(it)
 	}
+}
+
+def ensureWebTooling() {
+	def toolPaths = [
+		'node_modules/.bin/handlebars',
+		'node_modules/.bin/postcss',
+		'node_modules/.bin/uglifyjs'
+	]
+	if (toolPaths.every { file(it).exists() })
+		return
+	def installCmd = ['npm', file('package-lock.json').exists() ? 'ci' : 'install']
+	runShell(installCmd, projectDir)
 }
 
 def mergeFileTree(dir, out) {

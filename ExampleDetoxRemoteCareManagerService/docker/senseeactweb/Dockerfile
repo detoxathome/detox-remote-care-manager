@@ -28,8 +28,6 @@ WORKDIR /app/detox-remote-care-manager/ExampleDetoxRemoteCareManagerService
 RUN apt update && apt install curl -y
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o nodesource_setup.sh && chmod 755 nodesource_setup.sh && ./nodesource_setup.sh
 RUN apt install nodejs -y
-RUN npm install handlebars uglify-js -g
-RUN npm install cssnano postcss postcss-cli --save-dev
 RUN chmod 755 gradlew && sed -i 's/\r//' gradlew && ./gradlew webBuild
 
 FROM httpd:2.4-alpine AS prod
