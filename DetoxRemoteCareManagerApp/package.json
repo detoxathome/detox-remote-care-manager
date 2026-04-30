@@ -1,4 +1,5 @@
 {
+  "name": "DetoxRemoteCareManagerApp",
   "private": true,
   "devDependencies": {
     "cssnano": "^7.0.6",

@@ -16,7 +16,7 @@ java {
 }
 
 dependencies {
-	api project(':DetoxRemoteCareManagerServiceLib')
+	api project(':DetoxRemoteCareManagerLibrary')
 	api 'com.google.zxing:core:3.5.3'
 	api 'com.google.zxing:javase:3.5.3'
 

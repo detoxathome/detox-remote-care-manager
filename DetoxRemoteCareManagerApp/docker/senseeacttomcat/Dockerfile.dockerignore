@@ -10,16 +10,13 @@
 #   at the git root directory.
 
 **/
+!rrd-utils/RRDUtils/
 !detox-remote-care-manager/
 **/.*/
-!**/.htaccess
 **/bin/
 **/build/
 **/node_modules/
-detox-remote-care-manager/DataAccessObjects/
-detox-remote-care-manager/ExampleDetoxClient/
-detox-remote-care-manager/DetoxClient/
-detox-remote-care-manager/DetoxRemoteCareManagerServiceLib/
-detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/
-!detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/
-detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/src/
+detox-remote-care-manager/DataAccessObjects/gradle.properties
+detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/
+!detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/senseeacttomcat/
+detox-remote-care-manager/DetoxRemoteCareManagerApp/src/main/web/
