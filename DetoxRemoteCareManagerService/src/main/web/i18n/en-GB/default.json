@@ -42,7 +42,7 @@
 	"not_filled": "not filled",
 	"home": "Home",
 	"home_title": "Secure support for care at home",
-	"home_subtitle": "A calm, secure workspace for Detox@Home participants and care teams to manage access, connected phones, and account details.",
+	"home_subtitle": "A workspace for Detox@Home care teams to connect patient phones and (remotely) manage their tasks",
 	"home_intro": "Use the remote care manager to sign in, review your account, and connect the Detox@Home mobile experience.",
 	"home_platform_title": "Built on SenSeeAct",
 	"home_platform_body": "The Detox@Home remote care manager uses SenSeeAct as its underlying platform for authentication and connected care workflows.",
