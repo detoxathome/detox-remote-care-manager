@@ -24,6 +24,11 @@ The care professional-facing system where remote care is configured, managed, an
 
 Together, these form a remote care setup in which care professionals configure care, and clients receive and interact with that care in their daily environment.
 
+## Documentation
+
+- [Local build and start guide](docs/local-build-and-start.md)
+- [Module overview](docs/module-overview.md)
+
 # Origin: SenSeeAct
 
 This repository is based on a fork of the SenSeeAct platform, originally developed by Roessingh Research and Development￼.
