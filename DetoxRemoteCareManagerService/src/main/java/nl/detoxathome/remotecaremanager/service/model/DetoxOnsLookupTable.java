@@ -1,13 +1,15 @@
 package nl.detoxathome.remotecaremanager.service.model;
 
 import nl.detoxathome.remotecaremanager.dao.Database;
+import nl.detoxathome.remotecaremanager.dao.DatabaseColumnDef;
 import nl.detoxathome.remotecaremanager.dao.DatabaseTableDef;
+import nl.detoxathome.remotecaremanager.dao.DatabaseType;
 import nl.rrd.utils.exception.DatabaseException;
 
 public class DetoxOnsLookupTable extends DatabaseTableDef<DetoxOnsLookup> {
 	public static final String NAME = "detox_ons_lookup";
 
-	private static final int VERSION = 0;
+	private static final int VERSION = 1;
 
 	public DetoxOnsLookupTable() {
 		super(NAME, DetoxOnsLookup.class, VERSION, false);
@@ -16,6 +18,15 @@ public class DetoxOnsLookupTable extends DatabaseTableDef<DetoxOnsLookup> {
 	@Override
 	public int upgradeTable(int version, Database db, String physTable)
 			throws DatabaseException {
-		return 0;
+		if (version == 0)
+			return upgradeTableV0(db, physTable);
+		return 1;
+	}
+
+	private int upgradeTableV0(Database db, String physTable)
+			throws DatabaseException {
+		db.addColumn(physTable, new DatabaseColumnDef("onsInstance",
+				DatabaseType.STRING));
+		return 1;
 	}
 }

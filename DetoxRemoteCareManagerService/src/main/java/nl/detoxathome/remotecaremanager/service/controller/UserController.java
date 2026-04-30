@@ -111,12 +111,15 @@ public class UserController {
 			String versionName,
 			@RequestParam(value="onsId")
 			final String onsId,
+			@RequestParam(value="onsInstance", required=false, defaultValue="")
+			final String onsInstance,
 			@RequestParam(value="project", required=false, defaultValue="")
 			final String projectCode) throws HttpException, Exception {
+		logDetoxLinkRequest("/detox/ons-signup", request);
 		return QueryRunner.runAuthQuery(
 				(version, authDb, user, authDetails) ->
 				doSignupDetoxUserForOns(version, authDb, user, onsId,
-						projectCode),
+						onsInstance, projectCode),
 				versionName, request, response);
 	}
 
@@ -128,10 +131,13 @@ public class UserController {
 			@Parameter(hidden = true)
 			String versionName,
 			@RequestParam(value="onsId")
-			final String onsId) throws HttpException, Exception {
+			final String onsId,
+			@RequestParam(value="onsInstance", required=false, defaultValue="")
+			final String onsInstance) throws HttpException, Exception {
+		logDetoxLinkRequest("/detox/ons-lookup", request);
 		return QueryRunner.runAuthQuery(
 				(version, authDb, user, authDetails) ->
-				doGetDetoxOnsLookup(authDb, user, onsId),
+				doGetDetoxOnsLookup(authDb, user, onsId, onsInstance),
 				versionName, request, response);
 	}
 
@@ -144,15 +150,101 @@ public class UserController {
 			String versionName,
 			@RequestParam(value="onsId")
 			final String onsId,
+			@RequestParam(value="onsInstance", required=false, defaultValue="")
+			final String onsInstance,
 			@RequestParam(value="project", required=false, defaultValue="")
 			final String projectCode) throws HttpException, Exception {
+		logDetoxLinkRequest("/detox/ons-relink", request);
 		return QueryRunner.runAuthQuery(
 				(version, authDb, user, authDetails) ->
 				doRelinkDetoxUserForOns(version, authDb, user, onsId,
-						projectCode),
+						onsInstance, projectCode),
 				versionName, request, response);
 	}
-	
+
+	@RequestMapping(value="/detox/ons-queue-auto-cleanup",
+			method=RequestMethod.GET)
+	public Map<String,Object> getDetoxOnsQueueAutoCleanupSetting(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName) throws HttpException, Exception {
+		return QueryRunner.runAuthQuery(
+				(version, authDb, user, authDetails) ->
+				doGetDetoxOnsQueueAutoCleanupSetting(user),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/detox/ons-queue-auto-cleanup",
+			method=RequestMethod.PUT)
+	public Map<String,Object> setDetoxOnsQueueAutoCleanupSetting(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@RequestParam(value="enabled")
+			final String enabledStr) throws HttpException, Exception {
+		return QueryRunner.runAuthQuery(
+				(version, authDb, user, authDetails) ->
+				doSetDetoxOnsQueueAutoCleanupSetting(user, enabledStr),
+				versionName, request, response);
+	}
+
+	private void logDetoxLinkRequest(String endpoint,
+			HttpServletRequest request) {
+		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
+		Map<String,String[]> parameterMap = request.getParameterMap();
+		Map<String,Object> logParams = new LinkedHashMap<>();
+		List<String> keys = new ArrayList<>(parameterMap.keySet());
+		Collections.sort(keys);
+		for (String key : keys) {
+			String[] values = parameterMap.get(key);
+			if (values == null) {
+				logParams.put(key, null);
+			} else if (values.length == 1) {
+				logParams.put(key, values[0]);
+			} else {
+				logParams.put(key, Arrays.asList(values));
+			}
+		}
+		logger.info("Detox link endpoint called: endpoint={}, query={}, params={}",
+				endpoint, request.getQueryString(), logParams);
+	}
+
+	private Map<String,Object> doGetDetoxOnsQueueAutoCleanupSetting(User user)
+			throws HttpException {
+		if (user.getRole() != Role.ADMIN)
+			throw new ForbiddenException();
+		boolean enabled = Boolean.parseBoolean(
+				AppComponents.get(Configuration.class).get(
+						Configuration.DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES,
+						"false"));
+		Map<String,Object> result = new LinkedHashMap<>();
+		result.put("enabled", enabled);
+		return result;
+	}
+
+	private Map<String,Object> doSetDetoxOnsQueueAutoCleanupSetting(User user,
+			String enabledStr) throws HttpException, Exception {
+		if (user.getRole() != Role.ADMIN)
+			throw new ForbiddenException();
+		boolean enabled;
+		try {
+			enabled = TypeConversion.getBoolean(enabledStr);
+		} catch (ParseException ex) {
+			throw BadRequestException.withInvalidInput(
+					new HttpFieldError("enabled", ex.getMessage()));
+		}
+		Configuration config = AppComponents.get(Configuration.class);
+		config.setInDataDir(Configuration.DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES,
+				Boolean.toString(enabled));
+		Map<String,Object> result = new LinkedHashMap<>();
+		result.put("enabled", enabled);
+		return result;
+	}
+
 	@RequestMapping(value="/", method=RequestMethod.PUT)
 	@RequestBody(
 		content = {
@@ -308,10 +400,12 @@ public class UserController {
 
 	private DetoxOnsSignupResult doSignupDetoxUserForOns(ProtocolVersion version,
 			Database authDb, User currUser, String onsIdParam,
-			String projectCode) throws HttpException, Exception {
+			String onsInstanceParam, String projectCode) throws HttpException,
+			Exception {
 		if (currUser.getRole() != Role.PROFESSIONAL)
 			throw new ForbiddenException();
 		int onsId = parseOnsId(onsIdParam);
+		String onsInstance = parseOnsInstance(onsInstanceParam);
 		String resolvedProjectCode = projectCode;
 		if (resolvedProjectCode == null || resolvedProjectCode.isBlank())
 			resolvedProjectCode = "detox";
@@ -362,7 +456,7 @@ public class UserController {
 			UserListenerRepository.getInstance().notifyUserAddedToProject(newUser,
 					project.getCode(), Role.PATIENT);
 		}
-		DetoxOnsLookup.save(authDb, newUser.getUserid(), onsId);
+		DetoxOnsLookup.save(authDb, newUser.getUserid(), onsId, onsInstance);
 		DetoxOnsSignupResult result = new DetoxOnsSignupResult();
 		result.setSsaId(newUser.getUserid());
 		result.setEmail(email);
@@ -373,11 +467,13 @@ public class UserController {
 	}
 
 	private DetoxOnsLookup doGetDetoxOnsLookup(Database authDb, User currUser,
-			String onsIdParam) throws HttpException, Exception {
+			String onsIdParam, String onsInstanceParam) throws HttpException,
+			Exception {
 		if (currUser.getRole() != Role.PROFESSIONAL)
 			throw new ForbiddenException();
 		int onsId = parseOnsId(onsIdParam);
-		DetoxOnsLookup lookup = DetoxOnsLookup.findByOnsId(authDb, onsId);
+		String onsInstance = parseOnsInstance(onsInstanceParam);
+		DetoxOnsLookup lookup = findDetoxOnsLookup(authDb, onsId, onsInstance);
 		if (lookup == null)
 			throw new NotFoundException("ONS ID not linked");
 		return lookup;
@@ -385,17 +481,23 @@ public class UserController {
 
 	private DetoxOnsSignupResult doRelinkDetoxUserForOns(ProtocolVersion version,
 			Database authDb, User currUser, String onsIdParam,
-			String projectCode) throws HttpException, Exception {
+			String onsInstanceParam, String projectCode) throws HttpException,
+			Exception {
 		if (currUser.getRole() != Role.PROFESSIONAL)
 			throw new ForbiddenException();
 		int onsId = parseOnsId(onsIdParam);
-		DetoxOnsLookup existing = DetoxOnsLookup.findByOnsId(authDb, onsId);
+		String onsInstance = parseOnsInstance(onsInstanceParam);
+		DetoxOnsLookup existing = findDetoxOnsLookup(authDb, onsId,
+				onsInstance);
 		if (existing == null)
 			throw new NotFoundException("ONS ID not linked");
-		DatabaseCriteria criteria = new DatabaseCriteria.Equal("onsId", onsId);
+		DatabaseCriteria criteria = new DatabaseCriteria.And(
+				new DatabaseCriteria.Equal("onsId", onsId),
+				new DatabaseCriteria.Equal("onsInstance",
+						existing.getOnsInstance()));
 		authDb.delete(new DetoxOnsLookupTable(), criteria);
 		return doSignupDetoxUserForOns(version, authDb, currUser, onsIdParam,
-				projectCode);
+				onsInstanceParam, projectCode);
 	}
 
 	private int parseOnsId(String onsIdParam) throws BadRequestException {
@@ -420,6 +522,33 @@ public class UserController {
 		if (!errors.isEmpty())
 			throw BadRequestException.withInvalidInput(errors);
 		return onsId;
+	}
+
+	private String parseOnsInstance(String onsInstanceParam)
+			throws BadRequestException {
+		try {
+			DetoxOnsInstanceResolver.OnsInstance onsInstance =
+					DetoxOnsInstanceResolver.resolveForRequestParameter(
+							onsInstanceParam);
+			return onsInstance.getOnsInstanceUrl();
+		} catch (IllegalArgumentException ex) {
+			throw BadRequestException.withInvalidInput(
+					new HttpFieldError("onsInstance", ex.getMessage()));
+		}
+	}
+
+	private DetoxOnsLookup findDetoxOnsLookup(Database authDb, int onsId,
+			String onsInstance) throws Exception {
+		DetoxOnsLookup lookup = DetoxOnsLookup.findByOnsId(authDb, onsId,
+				onsInstance);
+		if (lookup != null)
+			return lookup;
+		String defaultOnsInstance = DetoxOnsInstanceResolver
+				.resolveForRequestParameter(null)
+				.getOnsInstanceUrl();
+		if (defaultOnsInstance.equals(onsInstance))
+			return DetoxOnsLookup.findByOnsId(authDb, onsId, null);
+		return null;
 	}
 
 	private String createUniqueTempEmail(UserCache userCache)

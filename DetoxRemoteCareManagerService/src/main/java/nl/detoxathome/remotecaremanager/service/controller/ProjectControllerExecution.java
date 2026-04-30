@@ -1418,19 +1418,14 @@ public class ProjectControllerExecution {
 		String normalizedType = normalizeDetoxType(detoxMessage.getType());
 		if (normalizedType == null) {
 			throw BadRequestException.withInvalidInput(new HttpFieldError("type",
-					"Unsupported type. Allowed values: heartrate, bloodpressure"));
+					"Unsupported type. Allowed values: heartrate, bloodpressure, detox_dagstart"));
 		}
 		detoxMessage.setType(normalizedType);
 		Map<?,?> payload = parseDetoxPayload(detoxMessage.getPayload());
-		ZoneId payloadZone = validateDetoxPayloadTime(payload, defaultTz);
-		ZoneId recordZone = recordMap.containsKey("timezone")
-				? detoxMessage.toTimeZone()
-				: payloadZone;
-		ZonedDateTime normalizedTzTime = ZonedDateTime.ofInstant(
-				Instant.ofEpochMilli(detoxMessage.getUtcTime()), recordZone);
-		detoxMessage.updateDateTime(normalizedTzTime);
+		ZoneId payloadZone;
 		if ("heartrate".equals(normalizedType)) {
 			requireDetoxNumber(payload, "value");
+			payloadZone = validateDetoxPayloadTime(payload, defaultTz);
 		} else if ("bloodpressure".equals(normalizedType)) {
 			requireDetoxNumber(payload, "diastolic");
 			requireDetoxNumber(payload, "systolic");
@@ -1438,12 +1433,36 @@ public class ProjectControllerExecution {
 				requireDetoxNumber(payload, "meanArterialPressure");
 			else
 				requireDetoxNumber(payload, "map");
+			payloadZone = validateDetoxPayloadTime(payload, defaultTz);
+		} else if ("detox_dagstart".equals(normalizedType)) {
+			requireDetoxString(payload, "hoeGaatHetVanochtend",
+					"goedemorgenHoeGaatHetVanochtend",
+					"Goedemorgen, hoe gaat het vanochtend?");
+			requireDetoxString(payload, "hebJeVertrouwenInVandaag",
+					"vertrouwenInVandaag", "Heb je vertrouwen in vandaag?");
+			requireDetoxBoolean(payload, "wilJeVandaagContactMetJouwHulpverlener",
+					"contactMetHulpverlener",
+					"Wil je vandaag contact met jouw hulpverlener?");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else {
+			payloadZone = defaultTz != null ? defaultTz : ZoneOffset.UTC;
 		}
+		ZoneId recordZone = recordMap.containsKey("timezone")
+				? detoxMessage.toTimeZone()
+				: payloadZone;
+		ZonedDateTime normalizedTzTime = ZonedDateTime.ofInstant(
+				Instant.ofEpochMilli(detoxMessage.getUtcTime()), recordZone);
+		detoxMessage.updateDateTime(normalizedTzTime);
 	}
 
 	private ZoneId validateDetoxPayloadTime(Map<?,?> payload, ZoneId defaultTz)
 			throws HttpException {
-		long utcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+		requireDetoxLong(payload, "timestampUtcMillis");
+		return resolveDetoxPayloadZone(payload, defaultTz);
+	}
+
+	private ZoneId resolveDetoxPayloadZone(Map<?,?> payload, ZoneId defaultTz)
+			throws HttpException {
 		Object timeZoneValue = payload.get("timeZone");
 		if (timeZoneValue == null || timeZoneValue.toString().isBlank())
 			return defaultTz != null ? defaultTz : ZoneOffset.UTC;
@@ -1482,6 +1501,8 @@ public class ProjectControllerExecution {
 			return "heartrate";
 		if ("bloodpressure".equals(normalized) || "blood".equals(normalized))
 			return "bloodpressure";
+		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
+			return "detox_dagstart";
 		return null;
 	}
 
@@ -1526,14 +1547,36 @@ public class ProjectControllerExecution {
 				"Invalid numeric field \"" + key + "\""));
 	}
 
-	private static String requireDetoxString(Map<?,?> map, String key)
+	private static String requireDetoxString(Map<?,?> map, String... keys)
 			throws HttpException {
-		Object value = map.get(key);
-		if (value == null || value.toString().isBlank()) {
-			throw BadRequestException.withInvalidInput(new HttpFieldError(
-					"payload", "Missing required field \"" + key + "\""));
+		for (String key : keys) {
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			return value.toString();
 		}
-		return value.toString();
+		throw BadRequestException.withInvalidInput(new HttpFieldError(
+				"payload", "Missing required field \"" + keys[0] + "\""));
+	}
+
+	private static boolean requireDetoxBoolean(Map<?,?> map, String... keys)
+			throws HttpException {
+		for (String key : keys) {
+			Object value = map.get(key);
+			if (value == null)
+				continue;
+			if (value instanceof Boolean boolValue)
+				return boolValue;
+			String stringValue = value.toString().trim();
+			if ("true".equalsIgnoreCase(stringValue))
+				return true;
+			if ("false".equalsIgnoreCase(stringValue))
+				return false;
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "Invalid boolean field \"" + keys[0] + "\""));
+		}
+		throw BadRequestException.withInvalidInput(new HttpFieldError(
+				"payload", "Missing required field \"" + keys[0] + "\""));
 	}
 
 	/**

@@ -94,6 +94,28 @@ class RemoteCareManagerClient {
 	}
 
 	/**
+	 * Calls endpoint GET /user/detox/ons-queue-auto-cleanup
+	 */
+	getDetoxOnsQueueAutoCleanupSetting() {
+		return $.ajax({
+			type: 'GET',
+			url: servicePath + '/user/detox/ons-queue-auto-cleanup'
+		});
+	}
+
+	/**
+	 * Calls endpoint PUT /user/detox/ons-queue-auto-cleanup
+	 */
+	setDetoxOnsQueueAutoCleanupSetting(enabled) {
+		let url = servicePath + '/user/detox/ons-queue-auto-cleanup?enabled=' +
+			encodeURIComponent(enabled);
+		return $.ajax({
+			type: 'PUT',
+			url: url
+		});
+	}
+
+	/**
 	 * Calls endpoint GET /download/projects
 	 */
 	getDownloadProjects() {

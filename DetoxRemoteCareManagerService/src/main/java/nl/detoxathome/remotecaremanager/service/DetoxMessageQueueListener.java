@@ -44,8 +44,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -58,17 +56,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class DetoxMessageQueueListener implements DatabaseActionListener {
-	// Toggle this for endpoint selection.
-	private static final boolean USE_ONS_ENDPOINT = true;
-
-	private static final String LOCAL_URL =
-			"http://host.docker.internal:4899";
-	private static final String ONS_URL =
-			"https://api-staging.ons.io/v0/openehr_dossier/back_channel/unauthorized/composition_wrappers";
-	private static final String ONS_MTLS_CERT_PATH =
-			"/etc/detoxrcm/ons/client.pem";
-	private static final String ONS_MTLS_KEY_PATH =
-			"/etc/detoxrcm/ons/client.key";
 	private static final String PROP_OUTGOING_URL =
 			"detoxrcm.outgoing.url";
 	private static final String PROP_OUTGOING_MTLS =
@@ -126,12 +113,19 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					rawRecordId);
 			return;
 		}
-		Integer onsId = findOnsId(ssaId);
-		if (onsId == null) {
+		DetoxOnsLookup onsLookup = findOnsLookup(ssaId);
+		if (onsLookup == null) {
 			logger.error("Detox queue processing failed: recordId={}, no ONS mapping for ssaId={}",
 					rawRecordId, ssaId);
 			return;
 		}
+		int onsId = onsLookup.getOnsId();
+		if (onsId <= 0) {
+			logger.error("Detox queue processing failed: recordId={}, invalid ONS ID for ssaId={}",
+					rawRecordId, ssaId);
+			return;
+		}
+		String onsInstance = onsLookup.getOnsInstance();
 		String compactPayload = getString(data.get("payload"));
 		String processedPayload;
 		try {
@@ -152,13 +146,14 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					rawRecordId, ex.getMessage());
 			return;
 		}
-		DetoxProcessedMessageQueue processed = insertProcessedRecord(ssaId,
-				onsId, type, processedPayload);
+		DetoxProcessedMessageQueue processed = insertProcessedRecord(rawRecordId,
+				ssaId, onsId, type, processedPayload);
 		if (processed == null)
 			return;
 		if (sendProcessedToOns(processed.getId(), processed.getUser(),
-				processed.getOnsId(), processed.getPayload())) {
-			markProcessedSent(processed.getId());
+				processed.getOnsId(), onsInstance, processed.getPayload())) {
+			onSuccessfulSendAcceptedByOns(processed.getRawQueueId(),
+					processed.getId());
 		}
 	}
 
@@ -179,6 +174,9 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					queueZone);
 		} else if ("bloodpressure".equals(type)) {
 			return buildBloodPressurePayload(compact, onsId, fallbackOnsTimestamp,
+					queueZone);
+		} else if ("detox_dagstart".equals(type)) {
+			return buildDetoxDagstartPayload(compact, onsId, fallbackOnsTimestamp,
 					queueZone);
 		} else {
 			throw new IllegalArgumentException("Unsupported type: " + type);
@@ -325,6 +323,52 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 	}
 
+	private String buildDetoxDagstartPayload(Map<String,Object> compact,
+			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
+		String hoeGaatHetVanochtend = requireString(compact,
+				"hoeGaatHetVanochtend",
+				"goedemorgenHoeGaatHetVanochtend",
+				"Goedemorgen, hoe gaat het vanochtend?");
+		String vertrouwenVandaag = requireString(compact,
+				"hebJeVertrouwenInVandaag",
+				"vertrouwenInVandaag",
+				"Heb je vertrouwen in vandaag?");
+		boolean contactMetHulpverlener = requireBoolean(compact,
+				"wilJeVandaagContactMetJouwHulpverlener",
+				"contactMetHulpverlener",
+				"Wil je vandaag contact met jouw hulpverlener?");
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		try {
+			Map<String,Object> paths = new LinkedHashMap<>();
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/value",
+					hoeGaatHetVanochtend);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id7,2]/value[id8,1]/value",
+					vertrouwenVandaag);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id9,3]/value[id10,1]/value",
+					contactMetHulpverlener);
+			paths.put(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/time[1]/value",
+					timestamp);
+			paths.put(
+					"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+					"");
+			String pathsString = jsonMapper.writeValueAsString(paths);
+			Map<String,Object> wrapper = new LinkedHashMap<>();
+			wrapper.put("clientId", onsId);
+			wrapper.put("archetypeId",
+					"nl.Detoxhome::openEHR-EHR-COMPOSITION.detox_dagstart_vragen_report.v0.1.0");
+			wrapper.put("pathsAndValues", pathsString);
+			return jsonMapper.writeValueAsString(wrapper);
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(
+					"Failed to build processed payload JSON");
+		}
+	}
+
 	private double requireNumber(Map<String,Object> map, String key) {
 		Object value = map.get(key);
 		if (value == null)
@@ -347,6 +391,38 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		if (map.containsKey(key))
 			return requireNumber(map, key);
 		return requireNumber(map, fallbackKey);
+	}
+
+	private String requireString(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			return value.toString();
+		}
+		throw new IllegalArgumentException("Missing required field: " + keys[0]);
+	}
+
+	private boolean requireBoolean(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null)
+				continue;
+			if (value instanceof Boolean boolValue)
+				return boolValue;
+			String strValue = value.toString().trim();
+			if ("true".equalsIgnoreCase(strValue))
+				return true;
+			if ("false".equalsIgnoreCase(strValue))
+				return false;
+			throw new IllegalArgumentException("Invalid boolean for field: " +
+					keys[0]);
+		}
+		throw new IllegalArgumentException("Missing required field: " + keys[0]);
 	}
 
 	private String resolvePayloadOnsTimestamp(Map<String,Object> compact,
@@ -453,11 +529,13 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			return "heartrate";
 		if ("bloodpressure".equals(normalized) || "blood".equals(normalized))
 			return "bloodpressure";
+		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
+			return "detox_dagstart";
 		return null;
 	}
 
-	private DetoxProcessedMessageQueue insertProcessedRecord(String user,
-			int onsId, String type, String processedPayload) {
+	private DetoxProcessedMessageQueue insertProcessedRecord(String rawQueueId,
+			String user, int onsId, String type, String processedPayload) {
 		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
 		DatabaseLoader dbLoader = DatabaseLoader.getInstance();
 		DatabaseConnection conn = null;
@@ -467,8 +545,8 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			if (projectDb == null)
 				return null;
 			DetoxProcessedMessageQueue record = new DetoxProcessedMessageQueue(
-					user, DateTimeUtils.nowMs(), onsId, type, processedPayload,
-					false);
+					user, DateTimeUtils.nowMs(), rawQueueId, onsId, type,
+					processedPayload, false);
 			projectDb.insert(DetoxProcessedMessageQueueTable.NAME, record);
 			return record;
 		} catch (DatabaseException | IOException ex) {
@@ -492,10 +570,13 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 	}
 
+	// HIER schedule line removal?
+	// Deze moet checken of de regel is verwerkt (processed message boolean), dan blijven de failures bewaard voor debuggen
+
 	private boolean sendProcessedToOns(String recordId, String ssaId, int onsId,
-			String payload) {
+			String onsInstance, String payload) {
 		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
-		OutgoingEndpoint endpoint = getOutgoingEndpoint();
+		OutgoingEndpoint endpoint = getOutgoingEndpoint(onsInstance);
 		if (payload == null)
 			payload = "";
 		try {
@@ -529,29 +610,31 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		return false;
 	}
 
-	private OutgoingEndpoint getOutgoingEndpoint() {
+	private OutgoingEndpoint getOutgoingEndpoint(String onsInstance) {
 		String overrideUrl = System.getProperty(PROP_OUTGOING_URL);
 		if (overrideUrl != null && !overrideUrl.isBlank()) {
 			boolean mtls = Boolean.parseBoolean(
 					System.getProperty(PROP_OUTGOING_MTLS, "false"));
-			return new OutgoingEndpoint("override", URI.create(overrideUrl), mtls);
+			return new OutgoingEndpoint("override", URI.create(overrideUrl), mtls,
+					null, null);
 		}
-		if (USE_ONS_ENDPOINT) {
-			return new OutgoingEndpoint("ons", URI.create(ONS_URL), true);
-		}
-		return new OutgoingEndpoint("local", URI.create(LOCAL_URL), false);
+		DetoxOnsInstanceResolver.OnsInstance resolved =
+				DetoxOnsInstanceResolver.resolveForStoredInstance(onsInstance);
+		return new OutgoingEndpoint("ons:" + resolved.getId(),
+				resolved.getEndpointUri(), resolved.requiresMtls(),
+				resolved.getMtlsCertPath(), resolved.getMtlsKeyPath());
 	}
 
 	private java.net.http.HttpClient getHttpClient(OutgoingEndpoint endpoint)
 			throws GeneralSecurityException, IOException {
 		if (!endpoint.requireMtls)
 			return plainHttpClient;
-		String certPath = ONS_MTLS_CERT_PATH;
-		String keyPath = ONS_MTLS_KEY_PATH;
+		String certPath = endpoint.certPath;
+		String keyPath = endpoint.keyPath;
 		if (certPath == null || certPath.isBlank() || keyPath == null ||
 				keyPath.isBlank()) {
 			throw new GeneralSecurityException(
-					"mTLS is enabled but cert/key path constants are not configured");
+					"mTLS is enabled but cert/key path is not configured");
 		}
 		String configKey = certPath + "|" + keyPath;
 		synchronized (HTTP_CLIENT_LOCK) {
@@ -619,7 +702,7 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 				.replaceAll("\\s", "");
 	}
 
-	private Integer findOnsId(String ssaId) {
+	private DetoxOnsLookup findOnsLookup(String ssaId) {
 		if (ssaId == null || ssaId.isBlank())
 			return null;
 		DatabaseLoader dbLoader = DatabaseLoader.getInstance();
@@ -627,17 +710,24 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		try {
 			conn = dbLoader.openConnection();
 			Database authDb = dbLoader.initAuthDatabase(conn);
-			return DetoxOnsLookup.findOnsId(authDb, ssaId);
+			return findOnsLookup(authDb, ssaId);
 		} catch (DatabaseException | IOException ex) {
 			Logger logger = AppComponents.getLogger(getClass().getSimpleName());
 			logger.error(
-					"Failed to resolve ONS ID from lookup table for ssaId={}",
+					"Failed to resolve ONS lookup from table for ssaId={}",
 					ssaId, ex);
 			return null;
 		} finally {
 			if (conn != null)
 				conn.close();
 		}
+	}
+
+	private DetoxOnsLookup findOnsLookup(Database authDb, String ssaId)
+			throws DatabaseException {
+		if (ssaId == null || ssaId.isBlank())
+			return null;
+		return DetoxOnsLookup.findBySsaId(authDb, ssaId);
 	}
 
 	private String getString(Object value) {
@@ -655,6 +745,7 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			Database projectDb = dbLoader.initProjectDatabase(conn, project);
 			if (projectDb == null)
 				return;
+			Database authDb = dbLoader.initAuthDatabase(conn);
 			DatabaseCriteria criteria = new DatabaseCriteria.Equal("sentToOns",
 					0);
 			DatabaseSort[] sort = new DatabaseSort[] {
@@ -665,9 +756,14 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			for (DetoxProcessedMessageQueue record : unsent) {
 				if (record == null || record.isSentToOns())
 					continue;
+				DetoxOnsLookup onsLookup = findOnsLookup(authDb,
+						record.getUser());
+				String onsInstance = onsLookup != null ?
+						onsLookup.getOnsInstance() : null;
 				if (sendProcessedToOns(record.getId(), record.getUser(),
-						record.getOnsId(), record.getPayload())) {
-					markProcessedSent(record.getId());
+						record.getOnsId(), onsInstance, record.getPayload())) {
+					onSuccessfulSendAcceptedByOns(record.getRawQueueId(),
+							record.getId());
 				}
 			}
 		} catch (DatabaseException | IOException ex) {
@@ -715,6 +811,50 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 	}
 
+	private void onSuccessfulSendAcceptedByOns(String rawQueueId,
+			String processedRecordId) {
+		if (shouldDeleteAcceptedQueueMessages())
+			deleteAcceptedQueueRecords(rawQueueId, processedRecordId);
+		else
+			markProcessedSent(processedRecordId);
+	}
+
+	private boolean shouldDeleteAcceptedQueueMessages() {
+		Configuration config = AppComponents.get(Configuration.class);
+		String enabled = config.get(
+				Configuration.DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES, "false");
+		return Boolean.parseBoolean(enabled);
+	}
+
+	private void deleteAcceptedQueueRecords(String rawQueueId,
+			String processedRecordId) {
+		Logger logger = AppComponents.getLogger(getClass().getSimpleName());
+		DatabaseLoader dbLoader = DatabaseLoader.getInstance();
+		DatabaseConnection conn = null;
+		try {
+			conn = dbLoader.openConnection();
+			Database projectDb = dbLoader.initProjectDatabase(conn, project);
+			if (projectDb == null)
+				return;
+			if (processedRecordId != null && !processedRecordId.isBlank()) {
+				DatabaseCriteria criteria = new DatabaseCriteria.Equal("id",
+						processedRecordId);
+				projectDb.delete(new DetoxProcessedMessageQueueTable(), criteria);
+			}
+			if (rawQueueId != null && !rawQueueId.isBlank()) {
+				DatabaseCriteria criteria = new DatabaseCriteria.Equal("id",
+						rawQueueId);
+				projectDb.delete(new DetoxMessageQueueTable(), criteria);
+			}
+		} catch (DatabaseException | IOException ex) {
+			logger.error("Failed to delete accepted detox queue records: " +
+					ex.getMessage(), ex);
+		} finally {
+			if (conn != null)
+				conn.close();
+		}
+	}
+
 	private class RetryUnsentTask extends AbstractScheduledTask {
 		public RetryUnsentTask() {
 			setSchedule(new TaskSchedule.FixedDelay(RETRY_INTERVAL));
@@ -737,11 +877,16 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		private final String mode;
 		private final URI url;
 		private final boolean requireMtls;
+		private final String certPath;
+		private final String keyPath;
 
-		public OutgoingEndpoint(String mode, URI url, boolean requireMtls) {
+		public OutgoingEndpoint(String mode, URI url, boolean requireMtls,
+				String certPath, String keyPath) {
 			this.mode = mode;
 			this.url = url;
 			this.requireMtls = requireMtls;
+			this.certPath = certPath;
+			this.keyPath = keyPath;
 		}
 	}
 }

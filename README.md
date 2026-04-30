@@ -17,10 +17,8 @@ It serves as the control and coordination layer of the Detox@Home ecosystem, com
 ## Relation to other components
 
 The Detox@Home system consists of two main parts:
-	•	detox-patient-prototype
-The patient-facing Android and WearOS application where clients interact with the digital guide and perform self-monitoring.
-	•	detox-remote-care-manager (this repository)
-The care professional-facing system where remote care is configured, managed, and connected to clinical systems (Ons).
+- **detox-patient-prototype**: The patient-facing Android and WearOS application where clients interact with the digital guide and perform self-monitoring.
+- **detox-remote-care-manager**: (this repository): The care professional-facing system where remote care is configured, managed, and connected to clinical systems (Ons).
 
 Together, these form a remote care setup in which care professionals configure care, and clients receive and interact with that care in their daily environment.
 
