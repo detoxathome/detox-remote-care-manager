@@ -4,29 +4,25 @@
 	<div class="form remote-task-shell">
 		<div class="remote-task-setup-grid">
 			<section id="remote-task-step-patient" class="remote-task-top-card remote-task-step-card remote-task-patient-card">
-				<div class="remote-task-card-step">Step 1</div>
-				<div class="remote-task-card-title">Select patient</div>
-				<div class="remote-task-card-copy">
-					Choose the linked patient whose remote task set you want to review or update.
-				</div>
+				<div class="remote-task-card-step" data-i18n="remote_task_editor_step_1"></div>
+				<div class="remote-task-card-title" data-i18n="remote_task_editor_select_patient_title"></div>
+				<div class="remote-task-card-copy" data-i18n="remote_task_editor_select_patient_copy"></div>
 				<div class="remote-task-subject-control">
-					<label class="remote-task-subject-label" for="remote-task-subject-select">Patient</label>
+					<label class="remote-task-subject-label" for="remote-task-subject-select" data-i18n="remote_task_editor_patient_label"></label>
 					<select id="remote-task-subject-select"></select>
 				</div>
 			</section>
 
 			<section id="remote-task-step-refresh" class="remote-task-top-card remote-task-step-card remote-task-action-card">
-				<div class="remote-task-card-step">Step 2</div>
-				<div class="remote-task-card-title">Refresh current tasks</div>
-				<div class="remote-task-card-copy">
-					A phone refresh starts automatically when you select a patient. Use these actions only if you need to retry that refresh or fall back to the latest server copy.
-				</div>
+				<div class="remote-task-card-step" data-i18n="remote_task_editor_step_2"></div>
+				<div class="remote-task-card-title" data-i18n="remote_task_editor_refresh_title"></div>
+				<div class="remote-task-card-copy" data-i18n="remote_task_editor_refresh_copy"></div>
 				<div class="remote-task-toolbar-actions remote-task-toolbar-actions-inline">
-					<button id="remote-task-refresh-app" class="remote-task-button remote-task-button-secondary remote-task-button-inline">Retry phone refresh</button>
-					<button id="remote-task-reload-latest" class="remote-task-button remote-task-button-subtle remote-task-button-inline">Use latest server snapshot</button>
+					<button id="remote-task-refresh-app" class="remote-task-button remote-task-button-secondary remote-task-button-inline" data-i18n="remote_task_editor_retry_phone_refresh_button"></button>
+					<button id="remote-task-reload-latest" class="remote-task-button remote-task-button-subtle remote-task-button-inline" data-i18n="remote_task_editor_use_server_snapshot_button"></button>
 				</div>
 				<div class="remote-task-status-panel">
-					<div class="remote-task-status-label">Current status</div>
+					<div class="remote-task-status-label" data-i18n="remote_task_editor_current_status_label"></div>
 					<div id="remote-task-status" class="remote-task-status-text"></div>
 					<div id="remote-task-banner" class="message" style="display: none"></div>
 				</div>
@@ -34,23 +30,21 @@
 		</div>
 
 		<section id="remote-task-step-edit" class="remote-task-editor-card remote-task-step-card">
-			<div class="remote-task-card-step">Step 3</div>
-			<div class="remote-task-card-title">Edit tasks</div>
-			<div class="remote-task-card-copy remote-task-editor-copy">
-				Review the task list on the left and adjust the selected task details on the right.
-			</div>
+			<div class="remote-task-card-step" data-i18n="remote_task_editor_step_3"></div>
+			<div class="remote-task-card-title" data-i18n="remote_task_editor_edit_title"></div>
+			<div class="remote-task-card-copy remote-task-editor-copy" data-i18n="remote_task_editor_edit_copy"></div>
 
 			<div class="remote-task-main">
 			<section class="remote-task-list-pane">
 				<div class="remote-task-pane-header">
 					<div>
-						<div class="remote-task-pane-title">Tasks</div>
+						<div class="remote-task-pane-title" data-i18n="remote_task_editor_tasks_title"></div>
 						<div class="remote-task-pane-subtitle" id="remote-task-list-summary"></div>
 					</div>
 					<div class="remote-task-list-actions remote-task-list-pane-actions">
-						<button id="remote-task-add" class="remote-task-button remote-task-button-subtle">Add</button>
-						<button id="remote-task-duplicate" class="remote-task-button remote-task-button-subtle">Duplicate</button>
-						<button id="remote-task-delete" class="remote-task-button remote-task-button-subtle">Delete</button>
+						<button id="remote-task-add" class="remote-task-button remote-task-button-subtle" data-i18n="add"></button>
+						<button id="remote-task-duplicate" class="remote-task-button remote-task-button-subtle" data-i18n="remote_task_editor_duplicate_button"></button>
+						<button id="remote-task-delete" class="remote-task-button remote-task-button-subtle" data-i18n="delete"></button>
 					</div>
 				</div>
 				<div id="remote-task-list" class="remote-task-list"></div>
@@ -59,77 +53,75 @@
 			<section class="remote-task-detail-pane">
 				<div class="remote-task-pane-header">
 					<div>
-						<div class="remote-task-pane-title">Task details</div>
+						<div class="remote-task-pane-title" data-i18n="remote_task_editor_task_details_title"></div>
 						<div class="remote-task-pane-subtitle" id="remote-task-detail-summary"></div>
 					</div>
 					<div class="remote-task-list-actions">
-						<button id="remote-task-discard-draft" class="remote-task-button remote-task-button-subtle">Discard draft</button>
-						<button id="remote-task-move-up" class="remote-task-button remote-task-button-subtle">Move up</button>
-						<button id="remote-task-move-down" class="remote-task-button remote-task-button-subtle">Move down</button>
+						<button id="remote-task-discard-draft" class="remote-task-button remote-task-button-subtle" data-i18n="remote_task_editor_discard_draft_button"></button>
+						<button id="remote-task-move-up" class="remote-task-button remote-task-button-subtle" data-i18n="remote_task_editor_move_up_button"></button>
+						<button id="remote-task-move-down" class="remote-task-button remote-task-button-subtle" data-i18n="remote_task_editor_move_down_button"></button>
 					</div>
 				</div>
 
-				<div id="remote-task-empty" class="caption">
-					Select a patient and choose a task to edit.
-				</div>
+				<div id="remote-task-empty" class="caption" data-i18n="remote_task_editor_empty_detail"></div>
 
 				<div id="remote-task-detail-form" style="display: none">
 					<div class="remote-task-form-grid">
 						<div class="remote-task-field">
-							<label for="remote-task-name">Taaknaam</label>
+							<label for="remote-task-name" data-i18n="remote_task_editor_field_name"></label>
 							<input id="remote-task-name" type="text" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-request-text">Vraagtekst</label>
+							<label for="remote-task-request-text" data-i18n="remote_task_editor_field_request_text"></label>
 							<input id="remote-task-request-text" type="text" />
 						</div>
 						<div class="remote-task-field remote-task-field-wide">
-							<label for="remote-task-description">Omschrijving</label>
+							<label for="remote-task-description" data-i18n="remote_task_editor_field_description"></label>
 							<textarea id="remote-task-description" rows="4"></textarea>
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-dialogue-id">Digital Guide gesprek</label>
+							<label for="remote-task-dialogue-id" data-i18n="remote_task_editor_field_dialogue_id"></label>
 							<input id="remote-task-dialogue-id" type="text" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-trigger-type">Voorkeurstrigger</label>
+							<label for="remote-task-trigger-type" data-i18n="remote_task_editor_field_trigger_type"></label>
 							<select id="remote-task-trigger-type">
-								<option value="FIXED_TIME">Vaste tijd</option>
-								<option value="STATE_BASED">Toestand</option>
+								<option value="FIXED_TIME" data-i18n="remote_task_editor_trigger_fixed_time"></option>
+								<option value="STATE_BASED" data-i18n="remote_task_editor_trigger_state_based"></option>
 							</select>
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-fixed-time">Vaste tijd</label>
+							<label for="remote-task-fixed-time" data-i18n="remote_task_editor_field_fixed_time"></label>
 							<input id="remote-task-fixed-time" type="time" step="1" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-state-start">State from</label>
+							<label for="remote-task-state-start" data-i18n="remote_task_editor_field_state_start"></label>
 							<input id="remote-task-state-start" type="time" step="1" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-state-end">State until</label>
+							<label for="remote-task-state-end" data-i18n="remote_task_editor_field_state_end"></label>
 							<input id="remote-task-state-end" type="time" step="1" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-state">Required state</label>
+							<label for="remote-task-state" data-i18n="remote_task_editor_field_required_state"></label>
 							<select id="remote-task-state">
 								<option value=""></option>
-								<option value="Rest">Rest</option>
-								<option value="Deviating">Deviating</option>
-								<option value="Other">Other</option>
-								<option value="ErrorUnknown">ErrorUnknown</option>
+								<option value="Rest" data-i18n="remote_task_editor_state_rest"></option>
+								<option value="Deviating" data-i18n="remote_task_editor_state_deviating"></option>
+								<option value="Other" data-i18n="remote_task_editor_state_other"></option>
+								<option value="ErrorUnknown" data-i18n="remote_task_editor_state_error_unknown"></option>
 							</select>
 						</div>
 						<div class="remote-task-field remote-task-field-checkbox">
-							<label for="remote-task-answerable-watch">Answerable on watch</label>
+							<label for="remote-task-answerable-watch" data-i18n="remote_task_editor_field_answerable_watch"></label>
 							<input id="remote-task-answerable-watch" type="checkbox" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-max-per-day">Maximum per day</label>
+							<label for="remote-task-max-per-day" data-i18n="remote_task_editor_field_max_per_day"></label>
 							<input id="remote-task-max-per-day" type="number" min="0" />
 						</div>
 						<div class="remote-task-field">
-							<label for="remote-task-min-interval">Minimum interval (minutes)</label>
+							<label for="remote-task-min-interval" data-i18n="remote_task_editor_field_min_interval"></label>
 							<input id="remote-task-min-interval" type="number" min="0" />
 						</div>
 					</div>
@@ -141,14 +133,12 @@
 		<section id="remote-task-step-publish" class="remote-task-top-card remote-task-step-card remote-task-publish-card">
 			<div class="remote-task-publish-layout">
 				<div class="remote-task-publish-copy">
-					<div class="remote-task-card-step">Step 4</div>
-					<div class="remote-task-card-title">Publish changes</div>
-					<div class="remote-task-card-copy">
-						When the draft looks right, publish the new task snapshot for the selected patient and linked devices.
-					</div>
+					<div class="remote-task-card-step" data-i18n="remote_task_editor_step_4"></div>
+					<div class="remote-task-card-title" data-i18n="remote_task_editor_publish_title"></div>
+					<div class="remote-task-card-copy" data-i18n="remote_task_editor_publish_copy"></div>
 				</div>
 				<div class="remote-task-publish-actions">
-					<button id="remote-task-publish" class="remote-task-button remote-task-button-primary">Publish to patient</button>
+					<button id="remote-task-publish" class="remote-task-button remote-task-button-primary" data-i18n="remote_task_editor_publish_button"></button>
 				</div>
 			</div>
 		</section>
