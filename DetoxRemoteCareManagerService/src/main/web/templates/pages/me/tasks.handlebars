@@ -2,56 +2,70 @@
 <div class="fill-space remote-task-page">
 	<div class="page-back-header"></div>
 	<div class="form remote-task-shell">
-		<div class="remote-task-toolbar">
-			<div class="remote-task-toolbar-main">
-				<div class="remote-task-toolbar-title">Remote task editor</div>
-				<div class="remote-task-toolbar-subtitle">
-					Fetch the latest task set from the linked phone before editing, then publish an append-only web snapshot.
+		<div class="remote-task-setup-grid">
+			<section id="remote-task-step-patient" class="remote-task-top-card remote-task-step-card remote-task-patient-card">
+				<div class="remote-task-card-step">Step 1</div>
+				<div class="remote-task-card-title">Select patient</div>
+				<div class="remote-task-card-copy">
+					Choose the linked patient whose remote task set you want to review or update.
 				</div>
-			</div>
-			<div class="remote-task-toolbar-actions">
-				<button id="remote-task-refresh-app" class="secondary-button">Refresh from app</button>
-				<button id="remote-task-reload-latest" class="secondary-button">Reload latest</button>
-				<button id="remote-task-discard-draft" class="secondary-button">Discard draft</button>
-				<button id="remote-task-publish">Publish to patient</button>
-			</div>
+				<div class="remote-task-subject-control">
+					<label class="remote-task-subject-label" for="remote-task-subject-select">Patient</label>
+					<select id="remote-task-subject-select"></select>
+				</div>
+			</section>
+
+			<section id="remote-task-step-refresh" class="remote-task-top-card remote-task-step-card remote-task-action-card">
+				<div class="remote-task-card-step">Step 2</div>
+				<div class="remote-task-card-title">Refresh current tasks</div>
+				<div class="remote-task-card-copy">
+					A phone refresh starts automatically when you select a patient. Use these actions only if you need to retry that refresh or fall back to the latest server copy.
+				</div>
+				<div class="remote-task-toolbar-actions remote-task-toolbar-actions-inline">
+					<button id="remote-task-refresh-app" class="remote-task-button remote-task-button-secondary remote-task-button-inline">Retry phone refresh</button>
+					<button id="remote-task-reload-latest" class="remote-task-button remote-task-button-subtle remote-task-button-inline">Use latest server snapshot</button>
+				</div>
+				<div class="remote-task-status-panel">
+					<div class="remote-task-status-label">Current status</div>
+					<div id="remote-task-status" class="remote-task-status-text"></div>
+					<div id="remote-task-banner" class="message" style="display: none"></div>
+				</div>
+			</section>
 		</div>
 
-		<div class="form-row remote-task-subject-row">
-			<div class="form-label">Patient</div>
-			<div class="form-value">
-				<select id="remote-task-subject-select"></select>
+		<section id="remote-task-step-edit" class="remote-task-editor-card remote-task-step-card">
+			<div class="remote-task-card-step">Step 3</div>
+			<div class="remote-task-card-title">Edit tasks</div>
+			<div class="remote-task-card-copy remote-task-editor-copy">
+				Review the task list on the left and adjust the selected task details on the right.
 			</div>
-		</div>
 
-		<div id="remote-task-status" class="caption"></div>
-		<div id="remote-task-banner" class="message" style="display: none"></div>
-
-		<div class="remote-task-main">
-			<div class="remote-task-list-pane">
+			<div class="remote-task-main">
+			<section class="remote-task-list-pane">
 				<div class="remote-task-pane-header">
 					<div>
 						<div class="remote-task-pane-title">Tasks</div>
 						<div class="remote-task-pane-subtitle" id="remote-task-list-summary"></div>
 					</div>
-					<div class="remote-task-list-actions">
-						<button id="remote-task-add" class="secondary-button">Add</button>
-						<button id="remote-task-duplicate" class="secondary-button">Duplicate</button>
-						<button id="remote-task-delete" class="secondary-button">Delete</button>
+					<div class="remote-task-list-actions remote-task-list-pane-actions">
+						<button id="remote-task-add" class="remote-task-button remote-task-button-subtle">Add</button>
+						<button id="remote-task-duplicate" class="remote-task-button remote-task-button-subtle">Duplicate</button>
+						<button id="remote-task-delete" class="remote-task-button remote-task-button-subtle">Delete</button>
 					</div>
 				</div>
 				<div id="remote-task-list" class="remote-task-list"></div>
-			</div>
+			</section>
 
-			<div class="remote-task-detail-pane">
+			<section class="remote-task-detail-pane">
 				<div class="remote-task-pane-header">
 					<div>
 						<div class="remote-task-pane-title">Task details</div>
 						<div class="remote-task-pane-subtitle" id="remote-task-detail-summary"></div>
 					</div>
 					<div class="remote-task-list-actions">
-						<button id="remote-task-move-up" class="secondary-button">Move up</button>
-						<button id="remote-task-move-down" class="secondary-button">Move down</button>
+						<button id="remote-task-discard-draft" class="remote-task-button remote-task-button-subtle">Discard draft</button>
+						<button id="remote-task-move-up" class="remote-task-button remote-task-button-subtle">Move up</button>
+						<button id="remote-task-move-down" class="remote-task-button remote-task-button-subtle">Move down</button>
 					</div>
 				</div>
 
@@ -120,8 +134,24 @@
 						</div>
 					</div>
 				</div>
+			</section>
 			</div>
-		</div>
+		</section>
+
+		<section id="remote-task-step-publish" class="remote-task-top-card remote-task-step-card remote-task-publish-card">
+			<div class="remote-task-publish-layout">
+				<div class="remote-task-publish-copy">
+					<div class="remote-task-card-step">Step 4</div>
+					<div class="remote-task-card-title">Publish changes</div>
+					<div class="remote-task-card-copy">
+						When the draft looks right, publish the new task snapshot for the selected patient and linked devices.
+					</div>
+				</div>
+				<div class="remote-task-publish-actions">
+					<button id="remote-task-publish" class="remote-task-button remote-task-button-primary">Publish to patient</button>
+				</div>
+			</div>
+		</section>
 	</div>
 </div>
 <script type="text/javascript">

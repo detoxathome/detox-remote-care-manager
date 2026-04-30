@@ -1,54 +1,220 @@
 .remote-task-page {
-	padding-bottom: 24px;
+	padding-bottom: 32px;
 }
 
 .remote-task-shell {
-	max-width: 1440px;
+	width: calc(100% - 40px);
+	max-width: 1240px;
+	margin: 16px auto 0px auto;
+}
+
+.remote-task-setup-grid {
+	display: grid;
+	grid-template-columns: minmax(0px, 1.05fr) minmax(0px, 1fr);
+	gap: 16px;
+}
+
+.remote-task-top-card {
+	border: 1px solid #dce2ea;
+	border-radius: 24px;
+	background: rgba(255, 255, 255, 0.94);
+	padding: 16px 18px 18px 18px;
+	box-shadow: 0px 12px 28px rgba(13, 26, 51, 0.06);
+}
+
+.remote-task-editor-card {
+	margin-top: 18px;
+	border: 1px solid #dce2ea;
+	border-radius: 28px;
+	background: rgba(255, 255, 255, 0.96);
+	padding: 18px 20px 20px 20px;
+	box-shadow: 0px 18px 36px rgba(13, 26, 51, 0.08);
+}
+
+.remote-task-step-card {
+	transition: opacity 140ms ease, box-shadow 140ms ease,
+		border-color 140ms ease, background-color 140ms ease,
+		transform 140ms ease;
+}
+
+.remote-task-step-card.is-current {
+	border-color: #a9bee6;
+	box-shadow: 0px 18px 36px rgba(40, 70, 127, 0.1);
+}
+
+.remote-task-step-card.is-inactive {
+	opacity: 0.46;
+	filter: saturate(0.55);
+}
+
+.remote-task-publish-card {
 	margin-top: 16px;
 }
 
-.remote-task-toolbar {
+.remote-task-publish-layout {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
-	align-items: flex-start;
-	gap: 16px;
-	flex-wrap: wrap;
+	gap: 18px;
 }
 
-.remote-task-toolbar-title {
-	font-size: 24px;
-	font-weight: 600;
+.remote-task-publish-copy {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
-.remote-task-toolbar-subtitle {
+.remote-task-card-step {
+	font-family: var(--heading-font);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #5673ab;
+}
+
+.remote-task-card-title {
+	margin-top: 6px;
+	font-family: var(--heading-font);
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.2;
+	color: var(--text-color);
+}
+
+.remote-task-card-copy {
 	margin-top: 6px;
 	max-width: 760px;
-	color: #4a5360;
-	line-height: 1.5;
+	color: var(--muted-text-color);
+	font-size: 14px;
+	line-height: 1.55;
+}
+
+.remote-task-editor-copy {
+	max-width: 620px;
+}
+
+.remote-task-subject-control {
+	margin-top: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.remote-task-subject-label,
+.remote-task-status-label {
+	font-family: var(--heading-font);
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #38568f;
+}
+
+.remote-task-subject-control select {
+	width: 100%;
+	min-height: 48px;
+	padding: 11px 14px;
+	border: 1px solid var(--border-color);
+	border-radius: 14px;
+	font-size: 15px;
+	font-family: inherit;
+	background: var(--surface-strong);
+	box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.7);
 }
 
 .remote-task-toolbar-actions {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
+	margin-top: 14px;
 }
 
-.remote-task-subject-row {
-	margin-top: 20px;
+.remote-task-toolbar-actions-inline {
+	align-items: center;
 }
 
-.remote-task-subject-row select {
-	width: 100%;
-	min-height: 42px;
-	padding: 8px 12px;
-	border: 1px solid #d3d9e2;
-	border-radius: 12px;
-	font-size: 15px;
+.remote-task-publish-actions {
+	display: flex;
+	justify-content: flex-end;
+	flex: 0 0 auto;
 }
 
-#remote-task-status {
-	margin-top: 12px;
-	color: #4a5360;
+.remote-task-page button.remote-task-button {
+	width: auto;
+	min-width: 0px;
+	height: 40px;
+	line-height: normal;
+	padding: 0px 18px;
+	border-radius: 999px;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	box-shadow: none;
+	white-space: nowrap;
+}
+
+.remote-task-page button.remote-task-button:disabled {
+	border: 1px solid var(--border-color);
+	background: #e8eef8;
+	color: #8090ad;
+}
+
+.remote-task-page button.remote-task-button-primary {
+	background: linear-gradient(135deg, var(--blue-color) 0%, #355b9d 100%);
+	color: white;
+	box-shadow: 0px 12px 22px rgba(40, 70, 127, 0.16);
+}
+
+.remote-task-page button.remote-task-button-primary:hover {
+	background: linear-gradient(135deg, var(--blue-hover-color) 0%, #4268b2 100%);
+}
+
+.remote-task-page button.remote-task-button-secondary {
+	border: 1px solid var(--border-color);
+	background: rgba(255, 255, 255, 0.78);
+	color: var(--text-color);
+	box-shadow: 0px 10px 22px rgba(13, 26, 51, 0.06);
+}
+
+.remote-task-page button.remote-task-button-secondary:hover {
+	background: var(--white-hover-color);
+	color: var(--text-color);
+}
+
+.remote-task-page button.remote-task-button-subtle {
+	height: 34px;
+	padding: 0px 14px;
+	border: 1px solid #d7dfec;
+	background: var(--surface-muted);
+	color: #243247;
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	box-shadow: none;
+}
+
+.remote-task-page button.remote-task-button-subtle:hover {
+	background: #ecf2fb;
+	color: #243247;
+}
+
+.remote-task-page button.remote-task-button-inline {
+	height: 34px;
+	padding: 0px 14px;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+}
+
+.remote-task-status-panel {
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid #e4eaf4;
+}
+
+.remote-task-status-text {
+	margin-top: 6px;
+	color: #40506c;
+	font-size: 14px;
+	line-height: 1.6;
 }
 
 #remote-task-banner {
@@ -57,18 +223,19 @@
 
 .remote-task-main {
 	display: grid;
-	grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+	grid-template-columns: minmax(300px, 390px) minmax(0px, 1fr);
 	gap: 20px;
-	margin-top: 20px;
+	margin-top: 18px;
+	align-items: start;
 }
 
 .remote-task-list-pane,
 .remote-task-detail-pane {
-	border: 1px solid #dce2ea;
-	border-radius: 20px;
-	background: #ffffff;
-	padding: 18px;
-	box-shadow: 0 10px 24px rgba(11, 26, 48, 0.06);
+	border: 1px solid #e4eaf4;
+	border-radius: 22px;
+	background: rgba(249, 251, 255, 0.88);
+	padding: 20px 18px 20px 18px;
+	box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.7);
 	min-height: 620px;
 }
 
@@ -76,80 +243,133 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	gap: 12px;
-	margin-bottom: 16px;
+	gap: 16px;
+	margin-bottom: 18px;
+	padding-bottom: 14px;
+	border-bottom: 1px solid #e8edf6;
 }
 
 .remote-task-pane-title {
-	font-size: 18px;
-	font-weight: 600;
+	font-family: var(--heading-font);
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.15;
+	color: var(--text-color);
 }
 
 .remote-task-pane-subtitle {
-	margin-top: 4px;
-	color: #4a5360;
+	margin-top: 6px;
+	color: var(--muted-text-color);
+	font-size: 14px;
+	line-height: 1.5;
 }
 
 .remote-task-list-actions {
 	display: flex;
-	gap: 8px;
 	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+.remote-task-list-pane-actions {
+	flex-wrap: nowrap;
+	gap: 6px;
+}
+
+.remote-task-list-pane-actions .remote-task-button {
+	height: 32px;
+	padding: 0px 10px;
+	font-size: 11px;
+	letter-spacing: 0.05em;
 }
 
 .remote-task-list {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
+	min-height: 340px;
+}
+
+.remote-task-list .caption {
+	font-family: inherit;
+	font-size: 15px;
+	font-weight: 500;
+	letter-spacing: 0;
+	line-height: 1.6;
+	color: var(--muted-text-color);
 }
 
 .remote-task-list-item {
 	border: 1px solid #dce2ea;
-	border-radius: 16px;
-	padding: 14px;
+	border-radius: 18px;
+	padding: 14px 16px;
+	background: rgba(247, 249, 253, 0.55);
 	cursor: pointer;
 	transition: border-color 120ms ease, box-shadow 120ms ease,
-		background-color 120ms ease;
+		background-color 120ms ease, transform 120ms ease;
 }
 
 .remote-task-list-item:hover {
 	border-color: #9cb9f5;
-	box-shadow: 0 8px 20px rgba(40, 99, 204, 0.08);
+	background: #f8fbff;
+	box-shadow: 0px 10px 18px rgba(40, 99, 204, 0.07);
+	transform: translateY(-1px);
 }
 
 .remote-task-list-item.selected {
 	border-color: #2863cc;
 	background: #eef4ff;
+	box-shadow: inset 0px 0px 0px 1px rgba(40, 99, 204, 0.08);
 }
 
 .remote-task-list-item-title {
-	font-weight: 600;
+	font-family: var(--heading-font);
+	font-size: 17px;
+	font-weight: 700;
+	line-height: 1.3;
 }
 
 .remote-task-list-item-request {
-	margin-top: 4px;
+	margin-top: 6px;
 	color: #4a5360;
+	line-height: 1.5;
 }
 
 .remote-task-list-item-summary {
 	margin-top: 10px;
 	color: #6a7482;
 	font-size: 13px;
-	line-height: 1.4;
+	line-height: 1.5;
+}
+
+.remote-task-empty {
+	padding: 26px 24px;
+	border: 1px dashed #c7d4e8;
+	border-radius: 20px;
+	background: var(--surface-muted);
+	font-family: inherit;
+	font-size: 16px;
+	font-weight: 500;
+	letter-spacing: 0;
+	line-height: 1.7;
+	color: var(--muted-text-color);
 }
 
 .remote-task-form-grid {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(2, minmax(0px, 1fr));
 	gap: 16px;
 }
 
 .remote-task-field {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 8px;
 }
 
 .remote-task-field label {
+	font-family: var(--heading-font);
+	font-size: 14px;
 	font-weight: 600;
 	color: #1d2430;
 }
@@ -157,16 +377,25 @@
 .remote-task-field input,
 .remote-task-field select,
 .remote-task-field textarea {
-	min-height: 42px;
+	min-height: 44px;
 	padding: 10px 12px;
 	border: 1px solid #d3d9e2;
-	border-radius: 12px;
+	border-radius: 14px;
 	font-size: 15px;
 	font-family: inherit;
+	background: #ffffff;
+}
+
+.remote-task-field input:focus,
+.remote-task-field select:focus,
+.remote-task-field textarea:focus,
+.remote-task-subject-control select:focus {
+	border-color: #7fa2e2;
+	box-shadow: 0px 0px 0px 4px rgba(86, 120, 194, 0.12);
 }
 
 .remote-task-field textarea {
-	min-height: 120px;
+	min-height: 128px;
 	resize: vertical;
 }
 
@@ -177,6 +406,16 @@
 .remote-task-field-checkbox {
 	flex-direction: row;
 	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 14px;
+	border: 1px solid #dce2ea;
+	border-radius: 16px;
+	background: var(--surface-muted);
+}
+
+.remote-task-field-checkbox label {
+	margin: 0;
 }
 
 .remote-task-field-checkbox input {
@@ -184,17 +423,17 @@
 	width: 18px;
 	height: 18px;
 	padding: 0;
-}
-
-.secondary-button {
-	background: #eff3f8;
-	color: #1d2430;
-	border: 1px solid #d3d9e2;
+	margin: 0;
 }
 
 @media (max-width: 1100px) {
+	.remote-task-setup-grid,
 	.remote-task-main {
 		grid-template-columns: 1fr;
+	}
+
+	.remote-task-editor-card {
+		padding: 18px 18px 18px 18px;
 	}
 
 	.remote-task-list-pane,
@@ -203,13 +442,80 @@
 	}
 }
 
+@media (max-width: 900px) {
+	.remote-task-toolbar-actions:not(.remote-task-toolbar-actions-inline) {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0px, 1fr));
+	}
+
+	.remote-task-toolbar-actions:not(.remote-task-toolbar-actions-inline) .remote-task-button {
+		width: 100%;
+	}
+
+	.remote-task-publish-actions {
+		justify-content: stretch;
+	}
+
+	.remote-task-publish-actions .remote-task-button {
+		width: 100%;
+	}
+}
+
 @media (max-width: 760px) {
-	.remote-task-toolbar,
+	.remote-task-shell {
+		width: calc(100% - 28px);
+	}
+
+	.remote-task-top-card,
+	.remote-task-editor-card,
+	.remote-task-list-pane,
+	.remote-task-detail-pane {
+		padding: 18px 16px 18px 16px;
+		border-radius: 20px;
+	}
+
+	.remote-task-card-title {
+		font-size: 20px;
+	}
+
+	.remote-task-pane-title {
+		font-size: 24px;
+	}
+
+	.remote-task-publish-layout {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
 	.remote-task-pane-header {
 		flex-direction: column;
 	}
 
 	.remote-task-form-grid {
 		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 560px) {
+	.remote-task-toolbar-actions:not(.remote-task-toolbar-actions-inline) {
+		grid-template-columns: 1fr;
+	}
+
+	.remote-task-list-actions {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.remote-task-list-pane-actions {
+		flex-wrap: wrap;
+	}
+
+	.remote-task-toolbar-actions-inline {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.remote-task-toolbar-actions-inline .remote-task-button {
+		width: 100%;
 	}
 }
