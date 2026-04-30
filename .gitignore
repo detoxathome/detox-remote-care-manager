@@ -1,8 +1,23 @@
-/**/.DS_Store/
-/**/.gradle/
-/**/.idea/
-/**/build/
-/**/node_modules/
-/**/package.json
-/**/package-lock.json
-/local.properties
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDEs
+.idea/
+**/.idea/
+*.iml
+out/
+**/out/
+
+# Gradle and build output
+.gradle/
+**/.gradle/
+build/
+**/build/
+
+# Node tooling
+node_modules/
+**/node_modules/
+
+# Local machine configuration
+local.properties

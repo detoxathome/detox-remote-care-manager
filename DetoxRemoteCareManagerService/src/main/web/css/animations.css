@@ -1,0 +1,125 @@
+@keyframes animation-toast-fade-in {
+	0% {
+		opacity: 0.0;
+	}
+	100% {
+		opacity: 1.0;
+	}
+}
+
+.animate-toast-fade-in {
+	animation-name: animation-toast-fade-in;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-toast-fade-out {
+	0% {
+		opacity: 1.0;
+	}
+	100% {
+		opacity: 0.0;
+	}
+}
+
+.animate-toast-fade-out {
+	animation-name: animation-toast-fade-out;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-menu-show {
+	0% {
+		right: -240px;
+	}
+	100% {
+		right: 0px;
+	}
+}
+
+.animate-menu-show {
+	animation-name: animation-menu-show;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-menu-hide {
+	0% {
+		right: 0px;
+	}
+	100% {
+		right: -240px;
+	}
+}
+
+.animate-menu-hide {
+	animation-name: animation-menu-hide;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-menu-background-show {
+	0% {
+		opacity: 0.0;
+	}
+	100% {
+		opacity: 0.5;
+	}
+}
+
+.animate-menu-background-show {
+	animation-name: animation-menu-background-show;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-menu-background-hide {
+	0% {
+		opacity: 0.5;
+	}
+	100% {
+		opacity: 0.0;
+	}
+}
+
+.animate-menu-background-hide {
+	animation-name: animation-menu-background-hide;
+	animation-timing-function: ease;
+	animation-duration: 400ms;
+}
+
+@keyframes animation-menu-item-click {
+	0% {
+		background: var(--white-hover-color);
+	}
+	50% {
+		background: var(--white-pressed-color);
+	}
+	100% {
+		background: var(--white-hover-color);
+	}
+}
+
+.animate-menu-item-click {
+	animation-name: animation-menu-item-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}
+
+@keyframes animation-header-submenu-item-click {
+	0% {
+		background: var(--white-hover-color);
+	}
+	50% {
+		background: #dbe5f7;
+	}
+	100% {
+		background: var(--white-hover-color);
+	}
+}
+
+.animate-header-submenu-item-click {
+	animation-name: animation-header-submenu-item-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}
