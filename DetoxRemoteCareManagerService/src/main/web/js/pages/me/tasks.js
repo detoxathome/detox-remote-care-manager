@@ -60,11 +60,11 @@ class RemoteTaskEditorPage {
 
 	_createView() {
 		let header = new PageBackHeader($('.page-back-header'));
-		header.title = 'Remote task editor';
+		header.title = i18next.t('remote_task_editor');
 		header.backUrl = basePath + '/me';
 		header.render();
 		menuController.showSidebar();
-		menuController.selectMenuItem('me');
+		menuController.selectMenuItem('me-tasks');
 		$(document.body).addClass('tinted-background');
 		$('#content').css('visibility', 'visible');
 
@@ -107,11 +107,11 @@ class RemoteTaskEditorPage {
 
 	_renderForbidden() {
 		let header = new PageBackHeader($('.page-back-header'));
-		header.title = 'Remote task editor';
+		header.title = i18next.t('remote_task_editor');
 		header.backUrl = basePath + '/me';
 		header.render();
 		menuController.showSidebar();
-		menuController.selectMenuItem('me');
+		menuController.selectMenuItem('me-tasks');
 		$('#content').css('visibility', 'visible');
 		this._setBanner('error',
 			'This page is only available for professionals and admins.');
