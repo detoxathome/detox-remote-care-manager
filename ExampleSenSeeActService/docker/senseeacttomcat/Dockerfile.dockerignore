@@ -11,12 +11,12 @@
 
 **/
 !rrd-utils/RRDUtils/
-!senseeact/
+!detox-remote-care-manager/
 **/.*/
 **/bin/
 **/build/
 **/node_modules/
-senseeact/DataAccessObjects/gradle.properties
-senseeact/ExampleSenSeeActService/docker/
-!senseeact/ExampleSenSeeActService/docker/senseeacttomcat/
-senseeact/ExampleSenSeeActService/src/main/web/
+detox-remote-care-manager/DataAccessObjects/gradle.properties
+detox-remote-care-manager/ExampleSenSeeActService/docker/
+!detox-remote-care-manager/ExampleSenSeeActService/docker/senseeacttomcat/
+detox-remote-care-manager/ExampleSenSeeActService/src/main/web/

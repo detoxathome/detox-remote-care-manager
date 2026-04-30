@@ -10,16 +10,16 @@
 #   at the git root directory.
 
 **/
-!senseeact/
+!detox-remote-care-manager/
 **/.*/
 !**/.htaccess
 **/bin/
 **/build/
 **/node_modules/
-senseeact/DataAccessObjects/
-senseeact/ExampleSenSeeActClient/
-senseeact/SenSeeActClient/
-senseeact/SenSeeActServiceLib/
-senseeact/ExampleSenSeeActService/docker/
-!senseeact/ExampleSenSeeActService/docker/senseeactweb/
-senseeact/ExampleSenSeeActService/src/
+detox-remote-care-manager/DataAccessObjects/
+detox-remote-care-manager/ExampleSenSeeActClient/
+detox-remote-care-manager/SenSeeActClient/
+detox-remote-care-manager/SenSeeActServiceLib/
+detox-remote-care-manager/ExampleSenSeeActService/docker/
+!detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/
+detox-remote-care-manager/ExampleSenSeeActService/src/

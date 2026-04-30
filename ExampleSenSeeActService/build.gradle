@@ -10,6 +10,9 @@ base {
 	archivesName = 'example-senseeact-service'
 }
 
+def workspaceDir = rootProject.projectDir.parentFile
+def repoDirName = rootProject.projectDir.name
+
 java {
 	sourceCompatibility = JavaVersion.VERSION_17
 	targetCompatibility = JavaVersion.VERSION_17
@@ -120,7 +123,7 @@ tasks.register('dockerDevBuild') {
 	description = 'Build Docker dev images'
 	
 	doLast {
-		def gitDir = file('../..')
+		def gitDir = workspaceDir
 
 		// build senseeacttomcat
 		copy {
@@ -131,8 +134,8 @@ tasks.register('dockerDevBuild') {
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeacttomcat',
-				'-f', 'senseeact/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile',
-				'--build-arg', 'GOOGLE_APPLICATION_CREDENTIALS=senseeact/ExampleSenSeeActService/google-application-credentials.json',
+				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile",
+				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleSenSeeActService/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
@@ -146,7 +149,7 @@ tasks.register('dockerDevBuild') {
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeactweb:dev', '--target', 'dev',
-				'-f', 'senseeact/ExampleSenSeeActService/docker/senseeactweb/Dockerfile',
+				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeactweb/Dockerfile",
 				'.']
 			runShell(cmd, gitDir)
 
@@ -178,10 +181,10 @@ tasks.register('dockerDevStart') {
 				'DOCKER_TAG': project.properties.dockerTag
 			)
 		}
-		def gitDir = file('../..')
+		def gitDir = workspaceDir
 		def cmd = ['docker', 'compose',
 			'-p', project.properties.dockerProject,
-			'-f', 'senseeact/ExampleSenSeeActService/compose-dev.yaml',
+			'-f', "${repoDirName}/ExampleSenSeeActService/compose-dev.yaml",
 			'up', '-d']
 		def env = [
 			DOCKER_CONTEXT: project.properties.dockerContext
@@ -195,7 +198,7 @@ tasks.register('dockerBuild') {
 	description = 'Build Docker images'
 	
 	doLast {
-		def gitDir = file('../..')
+		def gitDir = workspaceDir
 
 		def webUrl = project.properties.ssaconfigWebUrl
 		def pattern = ~/https?:\/\/[^\/]*(.*)/
@@ -211,8 +214,8 @@ tasks.register('dockerBuild') {
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeacttomcat:' + project.properties.dockerTag,
-				'-f', 'senseeact/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile',
-				'--build-arg', 'GOOGLE_APPLICATION_CREDENTIALS=senseeact/ExampleSenSeeActService/google-application-credentials.json',
+				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile",
+				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleSenSeeActService/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
@@ -226,7 +229,7 @@ tasks.register('dockerBuild') {
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeactweb:' + project.properties.dockerTag,
-				'-f', 'senseeact/ExampleSenSeeActService/docker/senseeactweb/Dockerfile',
+				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeactweb/Dockerfile",
 				'--build-arg', 'WEB_PATH=' + webPath,
 				'.']
 			runShell(cmd, gitDir)
@@ -282,7 +285,7 @@ tasks.register('dockerStart') {
 		runShell(cmd, dir, env)
 
 		// clean obsolete images and cache
-		def gitDir = file('../..')
+		def gitDir = workspaceDir
 		cmd = ['docker', '-c', project.properties.dockerContext,
 			'image', 'prune', '-f']
 		runShell(cmd, gitDir)
@@ -308,10 +311,10 @@ tasks.register('dockerStop') {
 				'down']
 			runShell(cmd, composeDir, env)
 		}
-		def gitDir = file('../..')
+		def gitDir = workspaceDir
 		cmd = ['docker', 'compose',
 			'-p', project.properties.dockerProject,
-			'-f', 'senseeact/ExampleSenSeeActService/compose-dev.yaml',
+			'-f', "${repoDirName}/ExampleSenSeeActService/compose-dev.yaml",
 			'down']
 		runShell(cmd, gitDir, env)
 	}
