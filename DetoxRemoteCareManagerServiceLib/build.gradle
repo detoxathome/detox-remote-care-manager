@@ -16,7 +16,7 @@ java {
 }
 
 dependencies {
-	api project(':SenSeeActClient')
+	api project(':DetoxClient')
 	api 'com.nimbusds:nimbus-jose-jwt:10.0.1'
 	api 'jakarta.mail:jakarta.mail-api:2.1.3'
 	api 'org.eclipse.angus:angus-mail:2.0.3'

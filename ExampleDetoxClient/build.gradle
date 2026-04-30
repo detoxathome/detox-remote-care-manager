@@ -16,7 +16,7 @@ java {
 }
 
 dependencies {
-	api project(':SenSeeActClient')
+	api project(':DetoxClient')
 }
 
 javadoc {
@@ -24,7 +24,7 @@ javadoc {
 		source = sourceSets.main.allJava +
 			project(':RRDUtils').sourceSets.main.allJava +
 			project(':DataAccessObjects').sourceSets.main.allJava +
-			project(':SenSeeActClient').sourceSets.main.allJava
+			project(':DetoxClient').sourceSets.main.allJava
 	}
 
 	options {

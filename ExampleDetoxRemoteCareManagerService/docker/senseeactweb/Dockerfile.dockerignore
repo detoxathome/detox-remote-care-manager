@@ -17,9 +17,9 @@
 **/build/
 **/node_modules/
 detox-remote-care-manager/DataAccessObjects/
-detox-remote-care-manager/ExampleSenSeeActClient/
-detox-remote-care-manager/SenSeeActClient/
-detox-remote-care-manager/SenSeeActServiceLib/
-detox-remote-care-manager/ExampleSenSeeActService/docker/
-!detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/
-detox-remote-care-manager/ExampleSenSeeActService/src/
+detox-remote-care-manager/ExampleDetoxClient/
+detox-remote-care-manager/DetoxClient/
+detox-remote-care-manager/DetoxRemoteCareManagerServiceLib/
+detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/
+!detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/
+detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/src/

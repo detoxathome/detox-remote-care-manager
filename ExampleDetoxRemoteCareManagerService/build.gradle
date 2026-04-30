@@ -23,8 +23,8 @@ configurations {
 }
 
 dependencies {
-	implementation project(':SenSeeActService')
-	implementation project(':ExampleSenSeeActClient')
+	implementation project(':DetoxRemoteCareManagerService')
+	implementation project(':ExampleDetoxClient')
 	testImplementation 'junit:junit:4.13.2'
 	runtimeOnly 'ch.qos.logback:logback-classic:1.5.16'
 	testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.16'
@@ -75,10 +75,10 @@ tasks.register('updateVersion') {
 			replace: "\\1v${version}'")
 		def envs = ['dev', 'prod']
 		for (env in envs) {
-			ant.replaceregexp(file: "../SenSeeActService/src/main/web/index.${env}.html",
+			ant.replaceregexp(file: "../DetoxRemoteCareManagerService/src/main/web/index.${env}.html",
 				match: "var version = '[0-9\\.]+';",
 				replace: "var version = '${version}';")
-			ant.replaceregexp(file: "../SenSeeActService/src/main/web/index.${env}.html",
+			ant.replaceregexp(file: "../DetoxRemoteCareManagerService/src/main/web/index.${env}.html",
 				match: "'/servlets/detoxrcm/v[0-9\\.]+'",
 				replace: "'/servlets/detoxrcm/v${version}'")
 		}
@@ -134,8 +134,8 @@ tasks.register('dockerDevBuild') {
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeacttomcat',
-				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile",
-				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleSenSeeActService/google-application-credentials.json",
+				'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/docker/senseeacttomcat/Dockerfile",
+				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleDetoxRemoteCareManagerService/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
@@ -149,7 +149,7 @@ tasks.register('dockerDevBuild') {
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeactweb:dev', '--target', 'dev',
-				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeactweb/Dockerfile",
+				'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/Dockerfile",
 				'.']
 			runShell(cmd, gitDir)
 
@@ -184,7 +184,7 @@ tasks.register('dockerDevStart') {
 		def gitDir = workspaceDir
 		def cmd = ['docker', 'compose',
 			'-p', project.properties.dockerProject,
-			'-f', "${repoDirName}/ExampleSenSeeActService/compose-dev.yaml",
+			'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/compose-dev.yaml",
 			'up', '-d']
 		def env = [
 			DOCKER_CONTEXT: project.properties.dockerContext
@@ -214,8 +214,8 @@ tasks.register('dockerBuild') {
 		try {
 			def cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeacttomcat:' + project.properties.dockerTag,
-				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeacttomcat/Dockerfile",
-				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleSenSeeActService/google-application-credentials.json",
+				'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/docker/senseeacttomcat/Dockerfile",
+				'--build-arg', "GOOGLE_APPLICATION_CREDENTIALS=${repoDirName}/ExampleDetoxRemoteCareManagerService/google-application-credentials.json",
 				'--build-arg', 'TOMCAT_ADMIN_USERNAME=' + project.properties.dockerTomcatUser,
 				'--build-arg', 'TOMCAT_ADMIN_PASSWORD=' + project.properties.dockerTomcatPassword,
 				'.']
@@ -229,7 +229,7 @@ tasks.register('dockerBuild') {
 			}
 			cmd = ['docker', '-c', project.properties.dockerContext,
 				'build', '-t', 'senseeactweb:' + project.properties.dockerTag,
-				'-f', "${repoDirName}/ExampleSenSeeActService/docker/senseeactweb/Dockerfile",
+				'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/Dockerfile",
 				'--build-arg', 'WEB_PATH=' + webPath,
 				'.']
 			runShell(cmd, gitDir)
@@ -314,7 +314,7 @@ tasks.register('dockerStop') {
 		def gitDir = workspaceDir
 		cmd = ['docker', 'compose',
 			'-p', project.properties.dockerProject,
-			'-f', "${repoDirName}/ExampleSenSeeActService/compose-dev.yaml",
+			'-f', "${repoDirName}/ExampleDetoxRemoteCareManagerService/compose-dev.yaml",
 			'down']
 		runShell(cmd, gitDir, env)
 	}
@@ -358,7 +358,7 @@ tasks.register('webDevBuild') {
 	description = 'Build web dev application'
 
 	doLast {
-		def ssaDir = file('../SenSeeActService/src/main/web')
+		def ssaDir = file('../DetoxRemoteCareManagerService/src/main/web')
 		def buildDir = file('build/web-src')
 		copy {
 			from ssaDir
@@ -456,7 +456,7 @@ tasks.register('webBuild') {
 	description = 'Build web application'
 
 	doLast {
-		def ssaDir = file('../SenSeeActService/src/main/web')
+		def ssaDir = file('../DetoxRemoteCareManagerService/src/main/web')
 		def buildDir = file('build/web-src')
 		copy {
 			from ssaDir

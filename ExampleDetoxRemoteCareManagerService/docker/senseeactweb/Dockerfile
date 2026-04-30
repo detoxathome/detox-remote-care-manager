@@ -1,9 +1,9 @@
 # Build from git directory:
-# docker build -t senseeactweb -f detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/Dockerfile .
+# docker build -t senseeactweb -f detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/Dockerfile .
 
 FROM httpd:2.4-alpine AS dev
 WORKDIR /usr/local/apache2
-COPY detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/*.conf conf/extra/
+COPY detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/*.conf conf/extra/
 RUN sed -i \
 	-e "s/^#\(LoadModule xml2enc_module\)/\1/" \
 	-e "s/^#\(LoadModule proxy_html_module\)/\1/" \
@@ -24,7 +24,7 @@ EXPOSE 8081
 FROM eclipse-temurin:21 AS build
 WORKDIR /app
 COPY ./ ./
-WORKDIR /app/detox-remote-care-manager/ExampleSenSeeActService
+WORKDIR /app/detox-remote-care-manager/ExampleDetoxRemoteCareManagerService
 RUN apt update && apt install curl -y
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o nodesource_setup.sh && chmod 755 nodesource_setup.sh && ./nodesource_setup.sh
 RUN apt install nodejs -y
@@ -35,8 +35,8 @@ RUN chmod 755 gradlew && sed -i 's/\r//' gradlew && ./gradlew webBuild
 FROM httpd:2.4-alpine AS prod
 ARG WEB_PATH
 WORKDIR /usr/local/apache2
-COPY detox-remote-care-manager/ExampleSenSeeActService/docker/senseeactweb/*.conf conf/extra/
-COPY --from=build /app/detox-remote-care-manager/ExampleSenSeeActService/build/web-src/ htdocs${WEB_PATH}/
+COPY detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/docker/senseeactweb/*.conf conf/extra/
+COPY --from=build /app/detox-remote-care-manager/ExampleDetoxRemoteCareManagerService/build/web-src/ htdocs${WEB_PATH}/
 RUN sed -i \
 	-e "s|var basePath = '.*';|var basePath = '${WEB_PATH}';|" \
 	-e "s|var servicePath = '.*';|var servicePath = '/servlets/detoxrcm/v6.1.0';|" \
