@@ -54,6 +54,10 @@ class RemoteTaskEditorPage {
 		checkLogin((data) => this._onGetUserDone(data));
 	}
 
+	_t(key, options) {
+		return i18next.t('remote_task_editor_' + key, options);
+	}
+
 	_onGetUserDone(data) {
 		this._user = data;
 		if (this._user.role === 'PATIENT') {
@@ -104,7 +108,7 @@ class RemoteTaskEditorPage {
 
 		$(window).on('beforeunload.remoteTaskEditor', () => {
 			if (this._selectedSubject && this._dirty)
-				return 'You have non-published task changes.';
+				return this._t('unload_warning');
 			return undefined;
 		});
 
@@ -121,16 +125,15 @@ class RemoteTaskEditorPage {
 		menuController.selectMenuItem('me-tasks');
 		$('#content').css('visibility', 'visible');
 		this._setBanner('error',
-			'This page is only available for professionals and admins.');
+			this._t('forbidden'));
 	}
 
 	_loadSubjects() {
-		this._setStatus('Loading linked Detox patients...');
+		this._setStatus(this._t('loading_subjects'));
 		this._client.getDetoxSubjects(this._project, false)
 			.done((subjects) => this._onSubjectsLoaded(subjects))
 			.fail(() => {
-				this._setBanner('error',
-					'Could not load linked Detox patients.');
+				this._setBanner('error', this._t('load_subjects_failed'));
 				this._setStatus('');
 			});
 	}
@@ -142,8 +145,8 @@ class RemoteTaskEditorPage {
 		this._subjectSelect.append($('<option></option>')
 			.attr('value', '')
 			.text(this._subjects.length > 0 ?
-				'Select a linked patient...' :
-				'No linked patients found'));
+				this._t('subject_select_placeholder') :
+				this._t('subject_none_placeholder')));
 		for (let subject of this._subjects) {
 			this._subjectMap[subject.userId] = subject;
 			let label = subject.displayName;
@@ -153,18 +156,18 @@ class RemoteTaskEditorPage {
 					label += ' (' + subject.onsInstance + ')';
 			}
 			if (!subject.pushReady)
-				label += ' | no push registration';
+				label += ' | ' + this._t('status_no_push');
 			this._subjectSelect.append($('<option></option>')
 				.attr('value', subject.userId)
 				.text(label));
 		}
 		if (this._subjects.length === 0) {
-			this._setStatus('No linked Detox patients are available for task editing.');
+			this._setStatus(this._t('status_no_patients'));
 			this._clearEditorState();
 			return;
 		}
 		if (!this._applyDeepLinkSelection())
-			this._setStatus('Select a linked patient to start an edit session.');
+			this._setStatus(this._t('status_select_patient'));
 		this._updateStepState();
 	}
 
@@ -194,32 +197,30 @@ class RemoteTaskEditorPage {
 		}
 		if (this._deepLinkOnsId && !this._deepLinkResolved) {
 			this._deepLinkResolved = true;
-			this._setStatus('Resolving linked Detox patient from ONS...');
+			this._setStatus(this._t('status_resolving_ons'));
 			this._client.getDetoxOnsLookup(this._deepLinkOnsId,
 					this._deepLinkOnsInstance)
 				.done((lookup) => {
 					let subjectId = lookup && lookup.ssaId ? lookup.ssaId : null;
 					if (!subjectId) {
-						this._setBanner('error',
-							'No linked Detox patient was returned for this ONS link.');
-						this._setStatus('Select a linked patient to start an edit session.');
+						this._setBanner('error', this._t('error_no_patient_from_ons_link'));
+						this._setStatus(this._t('status_select_patient'));
 						return;
 					}
 					this._deepLinkSubject = subjectId;
 					if (!this._selectSubjectFromDeepLink(subjectId)) {
-						this._setBanner('error',
-							'The linked Detox patient could not be opened in the task editor.');
-						this._setStatus('Select a linked patient to start an edit session.');
+						this._setBanner('error', this._t('error_open_ons_patient'));
+						this._setStatus(this._t('status_select_patient'));
 					}
 				})
 				.fail((xhr) => {
-					let message = 'The ONS-linked patient could not be resolved.';
+					let message = this._t('error_ons_resolve');
 					if (xhr && xhr.status === 404)
-						message = 'No Detox patient is linked to this ONS record yet.';
+						message = this._t('error_ons_not_linked');
 					else if (xhr && xhr.status === 403)
-						message = 'You do not have access to open this linked Detox patient.';
+						message = this._t('error_ons_forbidden');
 					this._setBanner('error', message);
-					this._setStatus('Select a linked patient to start an edit session.');
+					this._setStatus(this._t('status_select_patient'));
 				});
 			return true;
 		}
@@ -239,7 +240,7 @@ class RemoteTaskEditorPage {
 		let subjectId = this._subjectSelect.val();
 		if (this._dirty && this._selectedSubject !== subjectId &&
 				!window.confirm(
-					'Switching patients will lose all non-published changes for the current patient. Continue?')) {
+					this._t('confirm_switch_patient'))) {
 			this._subjectSelect.val(this._selectedSubject || '');
 			return;
 		}
@@ -248,7 +249,7 @@ class RemoteTaskEditorPage {
 			this._selectedSubjectSummary = null;
 			this._stopWatching();
 			this._clearEditorState();
-			this._setStatus('Select a linked patient to start an edit session.');
+			this._setStatus(this._t('status_select_patient'));
 			return;
 		}
 		this._selectedSubject = subjectId;
@@ -261,7 +262,7 @@ class RemoteTaskEditorPage {
 		if (!this._selectedSubject)
 			return;
 		if (this._dirty && !window.confirm(
-				'Retrying the phone refresh will replace the current draft with the latest tasks from the linked phone. Continue?')) {
+				this._t('confirm_retry_phone_refresh'))) {
 			return;
 		}
 		this._clearStoredDraft(this._selectedSubject);
@@ -272,7 +273,7 @@ class RemoteTaskEditorPage {
 		if (!this._selectedSubject)
 			return;
 		if (this._dirty && !window.confirm(
-				'Open the latest middleware snapshot and lose all non-published changes in the current draft?')) {
+				this._t('confirm_use_server_snapshot'))) {
 			return;
 		}
 		this._clearStoredDraft(this._selectedSubject);
@@ -282,7 +283,7 @@ class RemoteTaskEditorPage {
 	_discardDraft() {
 		if (!this._selectedSubject)
 			return;
-		if (this._dirty && !window.confirm('Discard the current draft?'))
+		if (this._dirty && !window.confirm(this._t('confirm_discard_draft')))
 			return;
 		this._clearStoredDraft(this._selectedSubject);
 		this._dirty = false;
@@ -296,7 +297,7 @@ class RemoteTaskEditorPage {
 		this._stopWatching();
 		this._startWatching(subjectId);
 		this._setBusy(true);
-		this._setStatus('Loading the latest middleware snapshot...');
+		this._setStatus(this._t('status_loading_snapshot'));
 		this._client.getProjectLastRecord(this._project, this._table, subjectId)
 			.done((response) => {
 				const fallbackRecord = response ? response.value : null;
@@ -310,18 +311,16 @@ class RemoteTaskEditorPage {
 			})
 			.fail(() => {
 				this._setBusy(false);
-				this._setBanner('error',
-					'Could not load the latest middleware snapshot.');
+				this._setBanner('error', this._t('error_load_snapshot'));
 			});
 	}
 
 	_requestFreshSnapshotFromApp(generation, subjectId, fallbackRecord) {
 		const summary = this._selectedSubjectSummary;
 		if (summary && !summary.pushReady) {
-			this._setBanner('warning',
-				'No task push registration is known for this patient. Waiting briefly for a pull-based refresh, then falling back to the latest middleware snapshot.');
+			this._setBanner('warning', this._t('warning_no_push_fallback'));
 		} else {
-			this._setStatus('Requesting the linked phone to upload its latest tasks...');
+			this._setStatus(this._t('status_request_phone'));
 		}
 		this._client.createDetoxTaskRefresh(this._project, subjectId)
 			.done((result) => {
@@ -331,7 +330,7 @@ class RemoteTaskEditorPage {
 			})
 			.fail(() => {
 				this._openEditorFromRecord(generation, subjectId, fallbackRecord,
-					'Could not create an app refresh request. Using the latest middleware snapshot instead.',
+					this._t('warning_refresh_request_failed'),
 					null);
 			});
 	}
@@ -360,7 +359,7 @@ class RemoteTaskEditorPage {
 				if (Date.now() >= deadline) {
 					this._openEditorFromRecord(generation, subjectId,
 						fallbackRecord,
-						'The linked phone did not upload a fresh task set in time. Editing continues from the latest middleware snapshot, which may be stale.',
+						this._t('warning_phone_timeout'),
 						requestToken);
 					return;
 				}
@@ -371,7 +370,7 @@ class RemoteTaskEditorPage {
 			})
 			.fail(() => {
 				this._openEditorFromRecord(generation, subjectId, fallbackRecord,
-					'The app refresh check failed. Editing continues from the latest middleware snapshot.',
+					this._t('warning_refresh_check_failed'),
 					requestToken);
 			});
 	}
@@ -397,7 +396,7 @@ class RemoteTaskEditorPage {
 				this._tasks = this._parseTaskXml(record.xml);
 			} catch (error) {
 				this._setBanner('error',
-					'The stored task XML could not be parsed: ' + error.message);
+					this._t('error_parse_xml', { message: error.message }));
 				this._tasks = [];
 			}
 		}
@@ -412,11 +411,9 @@ class RemoteTaskEditorPage {
 			this._dirty = true;
 			if (this._baseRecordId !== this._latestRecordId) {
 				this._stale = true;
-				this._setBanner('warning',
-					'A saved draft was restored, but a newer task snapshot now exists on the server. Reload latest before publishing, then re-apply the draft manually.');
+				this._setBanner('warning', this._t('warning_restored_stale_draft'));
 			} else if (!warningMessage) {
-				this._setBanner('warning',
-					'An unsaved draft was restored for this patient.');
+				this._setBanner('warning', this._t('warning_restored_draft'));
 			}
 		}
 
@@ -438,23 +435,24 @@ class RemoteTaskEditorPage {
 	_renderTaskList() {
 		this._list.empty();
 		if (this._tasks.length === 0) {
-			this._listSummary.text('No tasks loaded yet.');
+			this._listSummary.text(this._t('list_summary_empty'));
 			this._list.append($('<div></div>')
 				.addClass('caption')
-				.text('No tasks are available in the current snapshot.'));
+				.text(this._t('list_empty')));
 			return;
 		}
-		this._listSummary.text(this._tasks.length + ' task(s)');
+		this._listSummary.text(this._t('list_summary_count',
+			{ count: this._tasks.length }));
 		this._tasks.forEach((task, index) => {
 			let item = $('<div></div>').addClass('remote-task-list-item');
 			if (index === this._selectedTaskIndex)
 				item.addClass('selected');
 			item.append($('<div></div>')
 				.addClass('remote-task-list-item-title')
-				.text(task.name || 'Nieuwe taak'));
+				.text(task.name || this._t('default_task_name')));
 			item.append($('<div></div>')
 				.addClass('remote-task-list-item-request')
-				.text(task.requestText || 'Geen vraagtekst'));
+				.text(task.requestText || this._t('default_task_request_text')));
 			item.append($('<div></div>')
 				.addClass('remote-task-list-item-summary')
 				.text(this._taskSummary(task)));
@@ -478,7 +476,7 @@ class RemoteTaskEditorPage {
 		const task = this._tasks[this._selectedTaskIndex];
 		this._empty.hide();
 		this._detailForm.show();
-		this._detailSummary.text('Task ID ' + task.id);
+		this._detailSummary.text(this._t('detail_summary_id', { id: task.id }));
 		this._name.val(task.name || '');
 		this._requestText.val(task.requestText || '');
 		this._description.val(task.description || '');
@@ -546,7 +544,7 @@ class RemoteTaskEditorPage {
 	_deleteTask() {
 		if (this._selectedTaskIndex < 0)
 			return;
-		if (!window.confirm('Delete the selected task?'))
+		if (!window.confirm(this._t('confirm_delete_task')))
 			return;
 		this._tasks.splice(this._selectedTaskIndex, 1);
 		if (this._selectedTaskIndex >= this._tasks.length)
@@ -580,7 +578,7 @@ class RemoteTaskEditorPage {
 			return;
 		}
 		this._setBusy(true);
-		this._setStatus('Checking for newer task snapshots before publish...');
+		this._setStatus(this._t('status_check_publish'));
 		this._client.getProjectLastRecord(this._project, this._table,
 				this._selectedSubject)
 			.done((response) => {
@@ -592,8 +590,7 @@ class RemoteTaskEditorPage {
 					this._storeDraft();
 					this._updateStatusText(null);
 					this._updateStepState();
-					this._setBanner('warning',
-						'A newer task snapshot was published while you were editing. Your draft has been preserved locally, but publish is blocked until you reload the latest version.');
+					this._setBanner('warning', this._t('warning_publish_blocked_stale'));
 					return;
 				}
 				let xml;
@@ -602,8 +599,7 @@ class RemoteTaskEditorPage {
 				} catch (error) {
 					this._setBusy(false);
 					this._setBanner('error',
-						'Could not serialize the current draft to XML: ' +
-							error.message);
+						this._t('error_serialize_xml', { message: error.message }));
 					return;
 				}
 				let record = {
@@ -617,13 +613,12 @@ class RemoteTaskEditorPage {
 						this._clearStoredDraft(this._selectedSubject);
 						this._dirty = false;
 						this._stale = false;
-						this._setBanner('warning',
-							'Task snapshot published. Waiting for linked devices to sync the new version.');
+						this._setBanner('warning', this._t('warning_publish_success'));
 						this._startEditSession(this._selectedSubject, false);
 					})
 					.fail((xhr) => {
 						this._setBusy(false);
-						let message = 'Publishing the task snapshot failed.';
+						let message = this._t('error_publish_failed');
 						if (xhr && xhr.responseJSON && xhr.responseJSON.message)
 							message = xhr.responseJSON.message;
 						this._setBanner('error', message);
@@ -631,8 +626,7 @@ class RemoteTaskEditorPage {
 			})
 			.fail(() => {
 				this._setBusy(false);
-				this._setBanner('error',
-					'Could not refetch the latest snapshot before publish.');
+				this._setBanner('error', this._t('error_refetch_before_publish'));
 			});
 	}
 
@@ -640,18 +634,18 @@ class RemoteTaskEditorPage {
 		for (let i = 0; i < this._tasks.length; i++) {
 			let task = this._tasks[i];
 			if (!task.name || !task.requestText) {
-				return 'Each task needs at least a name and request text.';
+				return this._t('validation_missing_required');
 			}
 			if (task.maximumRequestsPerDay !== '' &&
 					task.maximumRequestsPerDay !== null &&
 					Number.isNaN(parseInt(task.maximumRequestsPerDay, 10))) {
-				return 'Maximum requests per day must be an integer.';
+				return this._t('validation_max_per_day_integer');
 			}
 			if (task.minimumIntervalRequestInMinutes !== '' &&
 					task.minimumIntervalRequestInMinutes !== null &&
 					Number.isNaN(parseInt(task.minimumIntervalRequestInMinutes,
 						10))) {
-				return 'Minimum interval must be an integer.';
+				return this._t('validation_min_interval_integer');
 			}
 		}
 		return null;
@@ -685,8 +679,7 @@ class RemoteTaskEditorPage {
 					this._stale = true;
 					this._updateStatusText(null);
 					this._updateStepState();
-					this._setBanner('warning',
-						'A newer app or web task snapshot arrived while this editor was open. Reload latest before publishing.');
+					this._setBanner('warning', this._t('warning_watch_update'));
 				}
 				this._watchLoop(subjectId, registrationId, generation);
 			})
@@ -768,33 +761,40 @@ class RemoteTaskEditorPage {
 			return;
 		}
 		let parts = [];
-		parts.push('Patient: ' + this._selectedSubjectSummary.displayName);
-		parts.push(this._selectedSubjectSummary.pushReady ?
-			'push ready (' +
-				this._selectedSubjectSummary.pushRegisteredDeviceCount +
-				' device' +
-				(this._selectedSubjectSummary.pushRegisteredDeviceCount === 1 ?
-					'' : 's') + ')' :
-			'no push registration');
+		parts.push(this._t('status_patient',
+			{ name: this._selectedSubjectSummary.displayName }));
+		if (this._selectedSubjectSummary.pushReady) {
+			const count = this._selectedSubjectSummary.pushRegisteredDeviceCount;
+			parts.push(this._t(
+				count === 1 ?
+					'status_push_ready_singular' :
+					'status_push_ready_plural',
+				{ count: count }));
+		} else {
+			parts.push(this._t('status_no_push'));
+		}
 		if (this._currentSnapshot) {
-			parts.push('base snapshot ' + this._currentSnapshot.id);
+			parts.push(this._t('status_base_snapshot',
+				{ id: this._currentSnapshot.id }));
 			if (this._currentSnapshot.localTime)
 				parts.push(this._currentSnapshot.localTime);
 			if (this._currentSnapshot.editorUser)
-				parts.push('editor ' + this._currentSnapshot.editorUser);
+				parts.push(this._t('status_editor',
+					{ name: this._currentSnapshot.editorUser }));
 			if (this._currentSnapshot.source)
-				parts.push('source ' + this._currentSnapshot.source);
+				parts.push(this._t('status_source',
+					{ source: this._currentSnapshot.source }));
 		} else {
-			parts.push('no stored snapshot yet');
+			parts.push(this._t('status_no_snapshot'));
 		}
 		if (requestToken)
-			parts.push('refresh token ' + requestToken);
+			parts.push(this._t('status_refresh_token', { token: requestToken }));
 		if (this._stale)
-			parts.push('stale draft');
+			parts.push(this._t('status_stale_draft'));
 		else if (this._dirty)
-			parts.push('unsaved changes');
+			parts.push(this._t('status_unsaved_changes'));
 		else
-			parts.push('saved');
+			parts.push(this._t('status_saved'));
 		this._setStatus(parts.join(' | '));
 	}
 
@@ -916,7 +916,7 @@ class RemoteTaskEditorPage {
 		}
 		if (!doc.documentElement ||
 				doc.documentElement.tagName !== 'ArrayList') {
-			throw new Error('Root element must be ArrayList');
+			throw new Error(this._t('parse_root_array_list'));
 		}
 		let tasks = [];
 		for (let node of Array.from(doc.documentElement.children)) {
@@ -1071,23 +1071,25 @@ class RemoteTaskEditorPage {
 	_taskSummary(task) {
 		let parts = [];
 		if (task.fixedTime)
-			parts.push('Fixed ' + task.fixedTime);
+			parts.push(this._t('summary_fixed', { time: task.fixedTime }));
 		if (task.stateTimeRangeStart || task.stateTimeRangeEnd) {
-			parts.push('Window ' +
-				(task.stateTimeRangeStart || '...') + ' - ' +
-				(task.stateTimeRangeEnd || '...'));
+			parts.push(this._t('summary_window', {
+				start: task.stateTimeRangeStart || '...',
+				end: task.stateTimeRangeEnd || '...'
+			}));
 		}
 		if (task.requiredState)
-			parts.push('State ' + task.requiredState);
+			parts.push(this._t('summary_state', { state: task.requiredState }));
 		if (task.maximumRequestsPerDay)
-			parts.push('Max ' + task.maximumRequestsPerDay + '/day');
+			parts.push(this._t('summary_max_per_day',
+				{ count: task.maximumRequestsPerDay }));
 		if (task.minimumIntervalRequestInMinutes) {
-			parts.push('Min interval ' +
-				task.minimumIntervalRequestInMinutes + ' min');
+			parts.push(this._t('summary_min_interval',
+				{ count: task.minimumIntervalRequestInMinutes }));
 		}
 		return parts.length > 0 ?
 			parts.join(' | ') :
-			'No trigger details configured';
+			this._t('summary_none');
 	}
 }
 
