@@ -1,6 +1,6 @@
-include ':DataAccessObjects', ':SenSeeActClient',
-		':SenSeeActServiceLib', ':SenSeeActService',
-		':ExampleSenSeeActClient', ':ExampleSenSeeActService',
+include ':DataAccessObjects', ':DetoxClient',
+		':DetoxRemoteCareManagerLibrary', ':DetoxRemoteCareManagerService',
+		':DetoxClientExtensions', ':DetoxRemoteCareManagerApp',
 		':RRDUtils'
 
 project(':RRDUtils').projectDir = new File(settingsDir, '../rrd-utils/RRDUtils').getCanonicalFile()

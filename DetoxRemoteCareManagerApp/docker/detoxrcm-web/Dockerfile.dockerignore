@@ -1,0 +1,25 @@
+# For this dockerignore file we assume that "docker build" is run from the git
+# root directory. Paths in this file are relative from there.
+#
+# This file is used in two cases:
+#
+# - With the COPY command in Dockerfile. In this case it should be next to
+#   Dockerfile as Dockerfile.dockerignore
+#
+# - When copying the workspace to a remote context. In this case it should be
+#   at the git root directory.
+
+**/
+!detox-remote-care-manager/
+**/.*/
+!**/.htaccess
+**/bin/
+**/build/
+**/node_modules/
+detox-remote-care-manager/DataAccessObjects/
+detox-remote-care-manager/DetoxClientExtensions/
+detox-remote-care-manager/DetoxClient/
+detox-remote-care-manager/DetoxRemoteCareManagerLibrary/
+detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/
+!detox-remote-care-manager/DetoxRemoteCareManagerApp/docker/detoxrcm-web/
+detox-remote-care-manager/DetoxRemoteCareManagerApp/src/

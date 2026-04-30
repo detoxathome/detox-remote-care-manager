@@ -1,0 +1,140 @@
+button, a.button {
+	width: 224px;
+	height: 48px;
+	line-height: 48px;
+	border: 0;
+	border-radius: 24px;
+	background: linear-gradient(135deg, var(--blue-color) 0%, #355b9d 100%);
+	text-align: center;
+	font-family: var(--heading-font);
+	text-transform: uppercase;
+	text-decoration: none;
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	color: white;
+	cursor: pointer;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	box-shadow: 0px 14px 28px rgba(40, 70, 127, 0.22);
+}
+
+button:hover, a.button:hover {
+	background: linear-gradient(135deg, var(--blue-hover-color) 0%, #4268b2 100%);
+	color: white;
+}
+
+button:disabled, a.button:disabled {
+	border: 1px solid var(--border-color);
+	background: #e8eef8;
+	color: #8090ad;
+	box-shadow: none;
+	cursor: default;
+}
+
+button.secondary, a.button.secondary {
+	border: 1px solid var(--border-color);
+	background: rgba(255, 255, 255, 0.72);
+	color: var(--text-color);
+	box-shadow: 0px 12px 30px rgba(13, 26, 51, 0.08);
+}
+
+button.secondary:hover, a.button.secondary:hover {
+	background: var(--white-hover-color);
+	color: var(--text-color);
+}
+
+button.small, a.button.small {
+	height: 36px;
+	line-height: 36px;
+	border-radius: 12px;
+	width: 114px;
+	font-size: 16px;
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
+button.grow-to-fit,
+a.button.grow-to-fit {
+	min-width: 224px;
+	width: auto;
+}
+
+button.small.grow-to-fit,
+a.button.small.grow-to-fit {
+	min-width: 114px;
+	width: auto;
+}
+
+@keyframes animation-blue-button-click {
+	0% {
+		background: linear-gradient(135deg, var(--blue-hover-color) 0%, #4268b2 100%);
+	}
+	50% {
+		background: linear-gradient(135deg, var(--blue-pressed-color) 0%, #27457f 100%);
+	}
+	100% {
+		background: linear-gradient(135deg, var(--blue-hover-color) 0%, #4268b2 100%);
+	}
+}
+
+.animate-blue-button-click {
+	animation-name: animation-blue-button-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}
+
+@keyframes animation-white-button-click {
+	0% {
+		background: var(--white-hover-color);
+	}
+	50% {
+		background: var(--white-pressed-color);
+	}
+	100% {
+		background: var(--white-hover-color);
+	}
+}
+
+.animate-white-button-click {
+	animation-name: animation-white-button-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}
+
+@keyframes animation-white-light-button-click {
+	0% {
+		background: var(--white-light-hover-color);
+	}
+	50% {
+		background: var(--white-light-pressed-color);
+	}
+	100% {
+		background: var(--white-light-hover-color);
+	}
+}
+
+.animate-white-light-button-click {
+	animation-name: animation-white-light-button-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}
+
+@keyframes animation-tinted-button-click {
+	0% {
+		background: var(--tinted-hover-color);
+	}
+	50% {
+		background: var(--tinted-pressed-color);
+	}
+	100% {
+		background: var(--tinted-hover-color);
+	}
+}
+
+.animate-tinted-button-click {
+	animation-name: animation-tinted-button-click;
+	animation-timing-function: ease;
+	animation-duration: 200ms;
+}

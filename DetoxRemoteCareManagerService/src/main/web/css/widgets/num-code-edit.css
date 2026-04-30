@@ -1,0 +1,21 @@
+.num-code-edit input {
+	width: 24px;
+	height: 32px;
+	margin-left: 8px;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	font-size: 18px;
+	text-align: center;
+	font-family: var(--body-font);
+	color: var(--text-color);
+	background: rgba(255, 255, 255, 0.9);
+}
+
+.num-code-edit input:first-child {
+	margin-left: 0px;
+}
+
+.num-code-edit.error input {
+	border: 2px solid var(--danger-color);
+	color: var(--danger-color);
+}
