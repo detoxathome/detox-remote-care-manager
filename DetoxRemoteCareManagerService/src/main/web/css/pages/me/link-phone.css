@@ -1,0 +1,55 @@
+#link-phone-error {
+	display: none;
+}
+
+#link-phone-already {
+	display: none;
+}
+
+#link-phone-wait {
+	display: none;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+#link-phone-result {
+	display: none;
+	margin-top: 20px;
+}
+
+#link-phone-qr-box {
+	display: flex;
+	margin: 0 auto 12px auto;
+	width: 280px;
+	height: 280px;
+	box-sizing: border-box;
+	border: 1px solid var(--border-color);
+	border-radius: 28px;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(255, 255, 255, 0.9);
+	box-shadow: 0px 18px 40px rgba(13, 26, 51, 0.1);
+}
+
+#link-phone-qr-box img {
+	width: 100%;
+	height: 100%;
+}
+
+#link-phone-qr-instruction {
+	margin-bottom: 8px;
+}
+
+#link-phone-credentials {
+	margin-top: 12px;
+}
+
+#link-phone-credentials .form-label {
+	color: var(--muted-text-color);
+}
+
+.credential-value {
+	font-family: var(--body-font);
+	font-weight: 600;
+	word-break: break-all;
+}

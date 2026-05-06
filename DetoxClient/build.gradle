@@ -1,0 +1,37 @@
+plugins {
+	id 'java'
+	id 'java-library'
+}
+
+group = 'nl.detoxathome.remotecaremanager'
+version = 6.0
+
+base {
+	archivesName = 'detox-client'
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+	api project(':DataAccessObjects')
+}
+
+tasks.withType(JavaCompile) {
+	options.deprecation = true
+}
+
+javadoc {
+	doFirst() {
+		source = sourceSets.main.allJava +
+			project(':RRDUtils').sourceSets.main.allJava +
+			project(':DataAccessObjects').sourceSets.main.allJava
+	}
+
+	options {
+		links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
+		addBooleanOption('Xdoclint:all,-missing,-html', true)
+	}
+}

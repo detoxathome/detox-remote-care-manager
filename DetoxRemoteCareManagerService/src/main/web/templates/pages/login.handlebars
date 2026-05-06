@@ -1,0 +1,33 @@
+<link rel="stylesheet" type="text/css" href="css/pages/login.css"></link>
+<div class="white-background">
+	<div class="center auth-page-header">
+		<img class="auth-page-logo" src="images/detox-at-home-logo.png"
+				alt="Detox at Home logo" />
+		<p class="auth-page-kicker">remote care manager</p>
+		<h1 data-i18n="log_in"></h1>
+		<p class="auth-page-description" data-i18n="home_subtitle"></p>
+		<div id="background-image"></div>
+	</div>
+</div>
+<form class="form" onsubmit="return false">
+	<div id="factor1">
+		<div id="email-edit" style="margin-top: 16px"></div>
+		<div id="password-edit" style="margin-top: 8px"></div>
+	</div>
+	<div id="factor2">
+		<div id="mfa-verify-code-text"></div>
+		<div id="mfa-verify-code-edit"></div>
+	</div>
+	<div id="login-error" class="message error center" style="margin-top: 16px"></div>
+	<div class="center">
+		<button id="button" name="submit" style="margin-top: 16px" data-i18n="log_in"></button>
+	</div>
+	<div class="caption center auth-page-links" style="margin-top: 16px">
+		<span data-i18n="no_account"></span>
+		<a class="action-link" href="{{basePath}}/signup" data-i18n="sign_up" style="margin-left: 4px"></a>
+	</div>
+</form>
+
+<script type="text/javascript">
+	loadJS('pages/login');
+</script>

@@ -1,0 +1,97 @@
+.editable-text-value {
+	display: grid;
+}
+
+.editable-text-value .view {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.editable-text-value .view-row {
+	display: flex;
+	height: 32px;
+	align-items: center;
+}
+
+.editable-text-value .edit {
+	grid-column: 1;
+	grid-row: 1;
+	display: none;
+}
+
+.editable-text-value .edit-form {
+	height: 32px;
+	display: flex;
+	align-items: center;
+}
+
+.editable-text-value .view .value {
+	flex-grow: 1;
+	width: 0px;
+	overflow-x: hidden;
+	text-overflow: ellipsis;
+	font-weight: 600;
+	padding-left: 12px;
+}
+
+.editable-text-value .view .value.not-filled,
+.editable-text-value .view .value.placeholder {
+	font-weight: 300;
+	font-style: italic;
+	color: var(--muted-text-color);
+}
+
+.editable-text-value .icon {
+	border-radius: 0px;
+	width: 20px;
+	height: 20px;
+	mask-size: 20px 20px;
+	-webkit-mask-size: 20px 20px;
+	background-color: var(--text-color);
+	margin-left: 12px;
+	cursor: pointer;
+}
+
+.editable-text-value .icon:focus {
+	background-color: #0000ff;
+}
+
+.editable-text-value .edit-form input {
+	flex-grow: 1;
+	width: 0px;
+	height: 32px;
+	border: 1px solid var(--border-color);
+	border-radius: 16px;
+	padding: 0px 12px;
+	background: rgba(255, 255, 255, 0.9);
+	color: var(--text-color);
+	font-family: var(--body-font);
+	font-weight: 600;
+	font-size: 15px;
+}
+
+.editable-text-value .edit-form input.error {
+	border: 1px solid var(--danger-color);
+	color: var(--danger-color);
+}
+
+.editable-text-value .icon.icon-edit {
+	mask-image: url('../../images/icon_pencil.svg');
+	-webkit-mask-image: url('../../images/icon_pencil.svg');
+}
+
+.editable-text-value .icon.icon-cancel {
+	mask-image: url('../../images/icon_xmark.svg');
+	-webkit-mask-image: url('../../images/icon_xmark.svg');
+}
+
+.editable-text-value .icon.icon-confirm {
+	mask-image: url('../../images/icon_check.svg');
+	-webkit-mask-image: url('../../images/icon_check.svg');
+}
+
+.editable-text-value div.error {
+	display: none;
+	padding-left: 12px;
+	margin-top: 4px;
+}

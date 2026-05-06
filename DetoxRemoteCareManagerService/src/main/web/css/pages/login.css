@@ -1,0 +1,31 @@
+#mfa-verify-code-text {
+	text-align: center;
+	margin-top: 16px;
+	color: var(--muted-text-color);
+}
+
+#mfa-verify-code-edit {
+	text-align: center;
+	margin-top: 16px;
+}
+
+#mfa-verify-code-edit input {
+	width: 32px;
+	height: 48px;
+	border: 1px solid var(--blue-color);
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0px 10px 24px rgba(40, 70, 127, 0.08);
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--blue-color);
+}
+
+#mfa-verify-code-edit.error input {
+	border: 2px solid var(--danger-color);
+	color: var(--danger-color);
+}
+
+#factor2 {
+	display: none;
+}

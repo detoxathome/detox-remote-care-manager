@@ -1,0 +1,134 @@
+.home-hero {
+	position: relative;
+	overflow: hidden;
+	padding: 40px 20px 80px 20px;
+}
+
+.home-hero::before,
+.home-hero::after {
+	content: '';
+	position: absolute;
+	border-radius: 999px;
+	pointer-events: none;
+}
+
+.home-hero::before {
+	width: 420px;
+	height: 420px;
+	top: -140px;
+	right: -140px;
+	background: radial-gradient(circle, rgba(86, 120, 194, 0.2) 0%,
+		rgba(86, 120, 194, 0) 72%);
+}
+
+.home-hero::after {
+	width: 360px;
+	height: 360px;
+	left: -140px;
+	bottom: -160px;
+	background: radial-gradient(circle, rgba(40, 70, 127, 0.18) 0%,
+		rgba(40, 70, 127, 0) 76%);
+}
+
+.home-hero-shell {
+	position: relative;
+	display: grid;
+	gap: 24px;
+	max-width: 1180px;
+	margin: 0 auto;
+	z-index: 1;
+}
+
+.home-brand-card,
+.home-side-card {
+	background: rgba(255, 255, 255, 0.82);
+	border: 1px solid var(--border-color);
+	border-radius: 32px;
+	backdrop-filter: blur(14px);
+	box-shadow: 0px 24px 54px rgba(13, 26, 51, 0.12);
+}
+
+.home-brand-card {
+	padding: 28px;
+}
+
+.home-logo {
+	width: min(100%, 520px);
+	height: auto;
+	margin-top: 24px;
+	filter: drop-shadow(0px 18px 34px rgba(13, 26, 51, 0.08));
+}
+
+.home-kicker {
+	margin: 20px 0px 10px 0px;
+	font-family: var(--heading-font);
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--blue-color);
+}
+
+.home-description {
+	max-width: 580px;
+	margin: 0px;
+	color: var(--muted-text-color);
+	font-size: 17px;
+	line-height: 1.75;
+}
+
+.home-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-top: 28px;
+}
+
+.home-side-panel {
+	display: grid;
+	gap: 20px;
+}
+
+.home-side-card {
+	padding: 28px;
+}
+
+.home-side-card h1,
+.home-side-card h2 {
+	max-width: 14ch;
+}
+
+.home-side-card p {
+	margin: 16px 0px 0px 0px;
+	color: var(--muted-text-color);
+	font-size: 16px;
+	line-height: 1.7;
+}
+
+.home-side-card.accent {
+	background: linear-gradient(160deg, rgba(40, 70, 127, 0.95) 0%,
+		rgba(27, 50, 95, 0.96) 100%);
+	border-color: rgba(86, 120, 194, 0.28);
+}
+
+.home-side-card.accent h2,
+.home-side-card.accent p {
+	color: white;
+}
+
+@media (min-width: 900px) {
+	.home-hero {
+		padding-top: 56px;
+		padding-bottom: 96px;
+	}
+
+	.home-hero-shell {
+		grid-template-columns: minmax(0px, 1.3fr) minmax(0px, 0.9fr);
+		align-items: stretch;
+	}
+
+	.home-brand-card,
+	.home-side-card {
+		padding: 36px;
+	}
+}

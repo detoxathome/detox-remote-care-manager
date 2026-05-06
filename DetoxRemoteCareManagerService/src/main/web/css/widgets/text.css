@@ -1,0 +1,16 @@
+div.error {
+	color: var(--danger-color);
+}
+
+div.message {
+	margin: 0 auto;
+}
+
+div.text-edit-error {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 360px;
+	margin: 0 auto;
+	color: var(--danger-color);
+	padding: 0 16px;
+}

@@ -1,0 +1,38 @@
+package nl.detoxathome.remotecaremanager.dao.sync;
+
+import nl.detoxathome.remotecaremanager.dao.BaseDatabaseObject;
+import nl.detoxathome.remotecaremanager.dao.DatabaseField;
+import nl.detoxathome.remotecaremanager.dao.DatabaseType;
+
+public class SyncTestUserObject extends BaseDatabaseObject {
+	@DatabaseField(value=DatabaseType.STRING)
+	private String user;
+	@DatabaseField(value=DatabaseType.STRING)
+	private String source;
+	@DatabaseField(value=DatabaseType.INT)
+	private int intField;
+
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = source;
+	}
+
+	public int getIntField() {
+		return intField;
+	}
+
+	public void setIntField(int intField) {
+		this.intField = intField;
+	}
+}

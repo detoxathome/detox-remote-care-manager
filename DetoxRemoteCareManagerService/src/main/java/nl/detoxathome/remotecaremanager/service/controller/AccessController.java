@@ -1,0 +1,265 @@
+package nl.detoxathome.remotecaremanager.service.controller;
+
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import nl.detoxathome.remotecaremanager.client.model.ProjectDataModule;
+import nl.detoxathome.remotecaremanager.client.model.ProjectUserAccessRule;
+import nl.detoxathome.remotecaremanager.dao.DatabaseObject;
+import nl.detoxathome.remotecaremanager.service.QueryRunner;
+import nl.detoxathome.remotecaremanager.service.exception.HttpException;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/v{version}/access")
+public class AccessController {
+	private static final Object WRITE_LOCK = new Object();
+
+	private AccessControllerExecution exec = new AccessControllerExecution();
+
+	@RequestMapping(value="/project/{project}/modules",
+			method=RequestMethod.GET)
+	public List<ProjectDataModule> getModuleList(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, srvProject) ->
+				exec.getModuleList(project),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/project/{project}/grantee/list",
+			method=RequestMethod.GET)
+	public List<ProjectUserAccessRule> getGranteeList(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@RequestParam(value="subject", required=false, defaultValue="")
+			String subject) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, srvProject) ->
+				exec.getGranteeList(version, authDb, user, project, subject),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/project/{project}/subject/list",
+			method=RequestMethod.GET)
+	public List<ProjectUserAccessRule> getProjectSubjectList(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@RequestParam(value="grantee", required=false, defaultValue="")
+			String grantee) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, srvProject) ->
+				exec.getProjectSubjectList(version, authDb, user, project,
+						grantee),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/project/{project}", method=RequestMethod.POST)
+	@RequestBody(
+		content = {
+			@Content(
+				mediaType = "application/json",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	public void setAccessRule(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@RequestParam(value="granteeEmail")
+			String granteeEmail,
+			@RequestParam(value="subject", required=false, defaultValue="")
+			String subject) throws HttpException, Exception {
+		synchronized (WRITE_LOCK) {
+			QueryRunner.runProjectQuery(
+					(version, authDb, projectDb, user, srvProject) ->
+					exec.setAccessRule(version, authDb, user, project,
+							granteeEmail, subject, request),
+					versionName, project, request, response);
+		}
+	}
+
+	@RequestMapping(value="/project/{project}", method=RequestMethod.DELETE)
+	public void deleteAccessRule(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@RequestParam(value="grantee")
+			String grantee,
+			@RequestParam(value="subject", required=false, defaultValue="")
+			String subject) throws HttpException, Exception {
+		synchronized (WRITE_LOCK) {
+			QueryRunner.runProjectQuery(
+					(version, authDb, projectDb, user, srvProject) ->
+					exec.deleteAccessRule(version, authDb, user, project,
+							grantee, subject),
+					versionName, project, request, response);
+		}
+	}
+
+	@RequestMapping(value="/subject/list", method=RequestMethod.GET)
+	public List<DatabaseObject> getSubjectList(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@RequestParam(value="user", required=false, defaultValue="")
+			final String user,
+			@RequestParam(value="includeInactive", required=false, defaultValue="true")
+			final String includeInactive) throws HttpException, Exception {
+		return QueryRunner.runAuthQuery(
+				(version, authDb, currUser, authDetails) ->
+				exec.getSubjectList(version, authDb, currUser, user,
+						includeInactive),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/subject", method=RequestMethod.POST)
+	public void addSubject(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@RequestParam(value="user")
+			final String user,
+			@RequestParam(value="subject")
+			final String subject) throws HttpException, Exception {
+		QueryRunner.runAuthQuery(
+				(version, authDb, currUser, authDetails) ->
+				exec.addSubject(version, authDb, currUser, user, subject),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/subject", method=RequestMethod.DELETE)
+	public void removeSubject(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@RequestParam(value="user")
+			final String user,
+			@RequestParam(value="subject")
+			final String subject) throws HttpException, Exception {
+		QueryRunner.runAuthQuery(
+				(version, authDb, currUser, authDetails) ->
+				exec.removeSubject(version, authDb, currUser, user,
+						subject),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/permission/list", method=RequestMethod.GET)
+	public List<Map<?,?>> getPermissions(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden=true)
+			String versionName,
+			@RequestParam(value="user", required=false, defaultValue="")
+			String subject) throws HttpException, Exception {
+		return QueryRunner.runAuthQuery((version, authDb, user, authDetails) ->
+			exec.getPermissions(version, authDb, user, subject),
+			versionName, request, response
+		);
+	}
+
+	@RequestMapping(value="/permission", method=RequestMethod.POST)
+	@RequestBody(
+		content = {
+			@Content(
+				mediaType = "application/json",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	public void grantPermission(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden=true)
+			String versionName,
+			@RequestParam(value="user")
+			String subject,
+			@RequestParam(value="permission")
+			String permission) throws HttpException, Exception {
+		QueryRunner.runAuthQuery((version, authDb, user, authDetails) ->
+				exec.grantPermission(version, authDb, user, request, subject,
+						permission),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/permission", method=RequestMethod.DELETE)
+	@RequestBody(
+		content = {
+			@Content(
+				mediaType = "application/json",
+				schema = @Schema(type = "string")
+			)
+		}
+	)
+	public void revokePermission(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden=true)
+			String versionName,
+			@RequestParam(value="user")
+			String subject,
+			@RequestParam(value="permission")
+			String permission) throws HttpException, Exception {
+		QueryRunner.runAuthQuery((version, authDb, user, authDetails) ->
+				exec.revokePermission(version, authDb, user, request, subject,
+						permission),
+				versionName, request, response);
+	}
+
+	@RequestMapping(value="/permission/all", method=RequestMethod.DELETE)
+	public void revokePermissionAll(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden=true)
+			String versionName,
+			@RequestParam(value="user")
+			String subject,
+			@RequestParam(value="permission")
+			String permission) throws HttpException, Exception {
+		QueryRunner.runAuthQuery((version, authDb, user, authDetails) ->
+				exec.revokePermissionAll(version, authDb, user, subject,
+						permission),
+				versionName, request, response);
+	}
+}

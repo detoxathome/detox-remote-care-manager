@@ -1,8 +1,10 @@
-/**/.DS_Store/
+.DS_Store
 /**/.gradle/
 /**/.idea/
 /**/build/
 /**/node_modules/
 /**/package.json
 /**/package-lock.json
+!/DetoxRemoteCareManagerApp/package.json
+!/DetoxRemoteCareManagerApp/package-lock.json
 /local.properties
