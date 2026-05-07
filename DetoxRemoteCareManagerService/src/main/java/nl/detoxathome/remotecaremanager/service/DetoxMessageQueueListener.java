@@ -48,6 +48,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -65,6 +66,30 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 	private static final Set<String> RETRY_TASK_PROJECTS = new HashSet<>();
 	private static final DateTimeFormatter ONS_UTC_TIME_FORMAT =
 			DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
+	private static final Map<String,CodedOption> AFWIJKING_OPENINGSVRAAG_OPTIONS =
+			createCodedOptions(
+					new CodedOption("at3", "ac2", "Het gaat niet goed met mij"),
+					new CodedOption("at4", "ac2", "Het gaat goed met mij"));
+	private static final Map<String,CodedOption> AFWIJKING_GEBRUIK_OPTIONS =
+			createCodedOptions(
+					new CodedOption("at15", "ac14", "Ja, ik heb gebruikt"),
+					new CodedOption("at16", "ac14",
+							"Ja, ik ben van plan te gebruiken"),
+					new CodedOption("at17", "ac14",
+							"Nee, ik heb niet gebruikt en geen plannen om te gaan gebruiken"));
+	private static final Map<String,CodedOption> AFWIJKING_ALLEEN_OPTIONS =
+			createCodedOptions(
+					new CodedOption("at21", "ac20", "Ja, ik ben alleen"),
+					new CodedOption("at22", "ac20",
+							"Nee, ik ben met mensen die mij steunen"),
+					new CodedOption("at23", "ac20",
+							"Nee, ik ben samen met andere mensen"));
+	private static final Map<String,CodedOption> AFWIJKING_HOE_SNEL_OPTIONS =
+			createCodedOptions(
+					new CodedOption("at27", "ac26", "Binnen een uur"),
+					new CodedOption("at28", "ac26", "Binnen een dagdeel"),
+					new CodedOption("at29", "ac26",
+							"Bij de volgende afspraak met mijn zorgverlener"));
 
 	private final String project;
 	private final Object HTTP_CLIENT_LOCK = new Object();
@@ -127,7 +152,7 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 		String onsInstance = onsLookup.getOnsInstance();
 		String compactPayload = getString(data.get("payload"));
-		String processedPayload;
+		List<ProcessedPayload> processedPayloads;
 		try {
 			ZoneId queueZone = parseZoneId(data.get("timezone"));
 			ZoneId effectiveZone = resolveUserZoneId(ssaId, queueZone);
@@ -139,26 +164,46 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					effectiveZone.getId(),
 					getString(data.get("localTime")), getString(data.get("utcTime")),
 					fallbackOnsTimestamp);
-			processedPayload = buildProcessedPayload(type, compactPayload, ssaId,
+			processedPayloads = buildProcessedPayloads(type, compactPayload, ssaId,
 					onsId, fallbackOnsTimestamp, effectiveZone);
 		} catch (IllegalArgumentException ex) {
 			logger.error("Detox queue processing failed: recordId={}, reason={}",
 					rawRecordId, ex.getMessage());
 			return;
 		}
-		DetoxProcessedMessageQueue processed = insertProcessedRecord(rawRecordId,
-				ssaId, onsId, type, processedPayload);
-		if (processed == null)
+		List<DetoxProcessedMessageQueue> processedRecords = new ArrayList<>();
+		for (ProcessedPayload processedPayload : processedPayloads) {
+			DetoxProcessedMessageQueue processed = insertProcessedRecord(rawRecordId,
+					ssaId, onsId, processedPayload.type, processedPayload.payload);
+			if (processed != null)
+				processedRecords.add(processed);
+		}
+		if (processedRecords.isEmpty())
 			return;
-		if (sendProcessedToOns(processed.getId(), processed.getUser(),
-				processed.getOnsId(), onsInstance, processed.getPayload())) {
-			onSuccessfulSendAcceptedByOns(processed.getRawQueueId(),
-					processed.getId());
+		for (DetoxProcessedMessageQueue processed : processedRecords) {
+			if (sendProcessedToOns(processed.getId(), processed.getUser(),
+					processed.getOnsId(), onsInstance, processed.getPayload())) {
+				onSuccessfulSendAcceptedByOns(processed.getRawQueueId(),
+						processed.getId());
+			}
 		}
 	}
 
 	private String buildProcessedPayload(String type, String compactPayload,
 			String ssaId, int onsId, String fallbackOnsTimestamp,
+			ZoneId queueZone) {
+		List<ProcessedPayload> processedPayloads = buildProcessedPayloads(type,
+				compactPayload, ssaId, onsId, fallbackOnsTimestamp, queueZone);
+		if (processedPayloads.isEmpty()) {
+			throw new IllegalArgumentException(
+					"No processed payload generated for type: " + type);
+		}
+		return processedPayloads.get(0).payload;
+	}
+
+	private List<ProcessedPayload> buildProcessedPayloads(String type,
+			String compactPayload, String ssaId, int onsId,
+			String fallbackOnsTimestamp,
 			ZoneId queueZone) {
 		Map<String,Object> compact;
 		try {
@@ -169,18 +214,42 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		} catch (Exception ex) {
 			throw new IllegalArgumentException("Invalid compact payload JSON");
 		}
+		return buildProcessedPayloads(type, compact, ssaId, onsId,
+				fallbackOnsTimestamp, queueZone);
+	}
+
+	private List<ProcessedPayload> buildProcessedPayloads(String type,
+			Map<String,Object> compact, String ssaId, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		List<ProcessedPayload> result = new ArrayList<>();
 		if ("heartrate".equals(type)) {
-			return buildHeartRatePayload(compact, onsId, fallbackOnsTimestamp,
-					queueZone);
+			result.add(new ProcessedPayload("heartrate",
+					buildHeartRatePayload(compact, onsId, fallbackOnsTimestamp,
+							queueZone)));
 		} else if ("bloodpressure".equals(type)) {
-			return buildBloodPressurePayload(compact, onsId, fallbackOnsTimestamp,
-					queueZone);
+			result.add(new ProcessedPayload("bloodpressure",
+					buildBloodPressurePayload(compact, onsId, fallbackOnsTimestamp,
+							queueZone)));
+			if (compact.containsKey("pulseBpm")) {
+				double pulseBpm = requireNumber(compact, "pulseBpm");
+				Map<String,Object> heartRateCompact = new LinkedHashMap<>(compact);
+				heartRateCompact.put("value", pulseBpm);
+				result.add(new ProcessedPayload("heartrate",
+						buildHeartRatePayload(heartRateCompact, onsId,
+								fallbackOnsTimestamp, queueZone)));
+			}
 		} else if ("detox_dagstart".equals(type)) {
-			return buildDetoxDagstartPayload(compact, onsId, fallbackOnsTimestamp,
-					queueZone);
+			result.add(new ProcessedPayload("detox_dagstart",
+					buildDetoxDagstartPayload(compact, onsId, fallbackOnsTimestamp,
+							queueZone)));
+		} else if ("afwijkingsbeoordeling".equals(type)) {
+			result.add(new ProcessedPayload("afwijkingsbeoordeling",
+					buildAfwijkingsbeoordelingPayload(compact, onsId,
+							fallbackOnsTimestamp, queueZone)));
 		} else {
 			throw new IllegalArgumentException("Unsupported type: " + type);
 		}
+		return result;
 	}
 
 	private String buildHeartRatePayload(Map<String,Object> compact, int onsId,
@@ -238,8 +307,8 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
 		int diastolic = (int)Math.round(requireNumber(compact, "diastolic"));
 		int systolic = (int)Math.round(requireNumber(compact, "systolic"));
-		int meanArterialPressure = (int)Math.round(
-				requireNumber(compact, "meanArterialPressure", "map"));
+		int meanArterialPressure = resolveMeanArterialPressure(compact, systolic,
+				diastolic);
 		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
 				fallbackOnsTimestamp);
 		String comment = compact.containsKey("comment") ?
@@ -323,6 +392,22 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		}
 	}
 
+	private int resolveMeanArterialPressure(Map<String,Object> compact,
+			int systolic, int diastolic) {
+		if (compact.containsKey("meanArterialPressure")) {
+			return (int)Math.round(requireNumber(compact, "meanArterialPressure"));
+		}
+		if (compact.containsKey("map"))
+			return (int)Math.round(requireNumber(compact, "map"));
+		// In the new blood_pressure payload format, MAP is omitted and pulseBpm is
+		// provided. We validate pulseBpm when present and derive MAP from systolic
+		// and diastolic so the outgoing ONS payload shape stays unchanged.
+		if (compact.containsKey("pulseBpm"))
+			requireNumber(compact, "pulseBpm");
+		double map = diastolic + (systolic - diastolic) / 3.0;
+		return (int)Math.round(map);
+	}
+
 	private String buildDetoxDagstartPayload(Map<String,Object> compact,
 			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
 		String hoeGaatHetVanochtend = requireString(compact,
@@ -361,6 +446,108 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			wrapper.put("clientId", onsId);
 			wrapper.put("archetypeId",
 					"nl.Detoxhome::openEHR-EHR-COMPOSITION.detox_dagstart_vragen_report.v0.1.0");
+			wrapper.put("pathsAndValues", pathsString);
+			return jsonMapper.writeValueAsString(wrapper);
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(
+					"Failed to build processed payload JSON");
+		}
+	}
+
+	private String buildAfwijkingsbeoordelingPayload(Map<String,Object> compact,
+			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
+		CodedOption openingsvraag = requireCodedOption(compact,
+				AFWIJKING_OPENINGSVRAAG_OPTIONS,
+				"openingsvraag",
+				"hoeGaatHet",
+				"Hoe gaat het");
+		boolean hebJeHulpNodig = requireBoolean(compact, "hebJeHulpNodig",
+				"hulpNodig", "Heb je hulp nodig?");
+		String waarHulpNodig = findOptionalString(compact,
+				"waarHebJeHulpBijNodig",
+				"hulpNodigWaarbij",
+				"Waar heb je hulp bij nodig?");
+		if (hebJeHulpNodig && (waarHulpNodig == null || waarHulpNodig.isBlank())) {
+			throw new IllegalArgumentException(
+					"Missing required field: waarHebJeHulpBijNodig");
+		}
+		CodedOption gebruik = findCodedOption(compact,
+				AFWIJKING_GEBRUIK_OPTIONS,
+				"gebruik",
+				"hebJeGebruiktOfGaJeGebruiken",
+				"Hebje gebruikt, of ben je van plan om te gaan gebruiken?");
+		CodedOption alleen = findCodedOption(compact,
+				AFWIJKING_ALLEEN_OPTIONS,
+				"alleenOfNiet",
+				"benJeAlleen",
+				"Ben je op dit moment alleen?");
+		CodedOption hoeSnel = findCodedOption(compact,
+				AFWIJKING_HOE_SNEL_OPTIONS,
+				"hoeSnelHulp",
+				"snelheidHulp",
+				"En hoe snel heb je hulp nodig?");
+		if (hebJeHulpNodig && hoeSnel == null) {
+			throw new IllegalArgumentException("Missing required field: hoeSnelHulp");
+		}
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		try {
+			Map<String,Object> paths = new LinkedHashMap<>();
+			paths.put("/category[id8,1]/defining_code[1]/code_string", "433");
+			paths.put("/category[id8,1]/defining_code[1]/terminology_id[1]/value",
+					"openehr");
+			paths.put("/category[id8,1]/value", "event");
+			paths.put("/composer[1]/external_ref[1]/id[1]/@type",
+					"HIER_OBJECT_ID");
+			paths.put("/composer[1]/external_ref[1]/id[1]/value",
+					"com.nedap.TE4776.employee::1497");
+			paths.put("/composer[1]/external_ref[1]/namespace", "demographic");
+			paths.put("/composer[1]/external_ref[1]/type", "PERSON");
+			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/code_string",
+					openingsvraag.codeString);
+			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/terminology_id[1]/value",
+					openingsvraag.terminologyId);
+			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/value",
+					openingsvraag.value);
+			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id10,2]/value[id11,1]/value",
+					hebJeHulpNodig);
+			if (waarHulpNodig != null && !waarHulpNodig.isBlank()) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id12,3]/value[id13,1]/value",
+						waarHulpNodig);
+			}
+			if (gebruik != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id18,4]/value[id19,1]/defining_code[1]/code_string",
+						gebruik.codeString);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id18,4]/value[id19,1]/defining_code[1]/terminology_id[1]/value",
+						gebruik.terminologyId);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id18,4]/value[id19,1]/value",
+						gebruik.value);
+			}
+			if (alleen != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id24,5]/value[id25,1]/defining_code[1]/code_string",
+						alleen.codeString);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id24,5]/value[id25,1]/defining_code[1]/terminology_id[1]/value",
+						alleen.terminologyId);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id24,5]/value[id25,1]/value",
+						alleen.value);
+			}
+			if (hoeSnel != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/defining_code/code_string",
+						hoeSnel.codeString);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/defining_code/terminology_id/value",
+						hoeSnel.terminologyId);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/value",
+						hoeSnel.value);
+			}
+			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/time[1]/value",
+					timestamp);
+			paths.put("/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+					"");
+			String pathsString = jsonMapper.writeValueAsString(paths);
+			Map<String,Object> wrapper = new LinkedHashMap<>();
+			wrapper.put("clientId", onsId);
+			wrapper.put("archetypeId",
+					"nl.Detoxhome::openEHR-EHR-COMPOSITION.afwijkingsbeoordeling_report.v1.0.0");
 			wrapper.put("pathsAndValues", pathsString);
 			return jsonMapper.writeValueAsString(wrapper);
 		} catch (Exception ex) {
@@ -423,6 +610,47 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					keys[0]);
 		}
 		throw new IllegalArgumentException("Missing required field: " + keys[0]);
+	}
+
+	private CodedOption requireCodedOption(Map<String,Object> map,
+			Map<String,CodedOption> options, String... keys) {
+		CodedOption option = findCodedOption(map, options, keys);
+		if (option != null)
+			return option;
+		throw new IllegalArgumentException("Missing required field: " + keys[0]);
+	}
+
+	private CodedOption findCodedOption(Map<String,Object> map,
+			Map<String,CodedOption> options, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			String optionValue = value.toString().trim();
+			CodedOption option = options.get(optionValue.toLowerCase());
+			if (option == null)
+				option = options.get(normalizeOptionValue(optionValue));
+			if (option == null) {
+				throw new IllegalArgumentException(
+						"Invalid option for field: " + keys[0]);
+			}
+			return option;
+		}
+		return null;
+	}
+
+	private String findOptionalString(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			return value.toString();
+		}
+		return null;
 	}
 
 	private String resolvePayloadOnsTimestamp(Map<String,Object> compact,
@@ -531,7 +759,47 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			return "bloodpressure";
 		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
 			return "detox_dagstart";
+		if ("afwijkingsbeoordeling".equals(normalized) ||
+				"afwijking".equals(normalized))
+			return "afwijkingsbeoordeling";
 		return null;
+	}
+
+	private static Map<String,CodedOption> createCodedOptions(
+			CodedOption... options) {
+		Map<String,CodedOption> result = new LinkedHashMap<>();
+		for (CodedOption option : options) {
+			result.put(option.codeString.toLowerCase(), option);
+			result.put(normalizeOptionValue(option.value), option);
+		}
+		return result;
+	}
+
+	private static String normalizeOptionValue(String value) {
+		return value.toLowerCase().replaceAll("[^\\p{L}\\p{Nd}]+", "");
+	}
+
+	private static class CodedOption {
+		private final String codeString;
+		private final String terminologyId;
+		private final String value;
+
+		private CodedOption(String codeString, String terminologyId,
+				String value) {
+			this.codeString = codeString;
+			this.terminologyId = terminologyId;
+			this.value = value;
+		}
+	}
+
+	private static class ProcessedPayload {
+		private final String type;
+		private final String payload;
+
+		private ProcessedPayload(String type, String payload) {
+			this.type = type;
+			this.payload = payload;
+		}
 	}
 
 	private DetoxProcessedMessageQueue insertProcessedRecord(String rawQueueId,

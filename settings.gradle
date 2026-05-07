@@ -1,6 +1,14 @@
 include ':DataAccessObjects', ':DetoxClient',
 		':DetoxRemoteCareManagerLibrary', ':DetoxRemoteCareManagerService',
-		':DetoxClientExtensions', ':DetoxRemoteCareManagerApp',
-		':RRDUtils'
+		':DetoxClientExtensions', ':DetoxRemoteCareManagerApp', 'RRDUtils'
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+
 
 project(':RRDUtils').projectDir = new File(settingsDir, '../rrd-utils/RRDUtils').getCanonicalFile()
