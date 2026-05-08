@@ -59,6 +59,31 @@ public class ProjectControllerExecution {
 	public static final int HANGING_GET_TIMEOUT = 60000;
 	private static final ObjectMapper DETOX_PAYLOAD_JSON_MAPPER =
 			new ObjectMapper();
+	private static final Map<String,DetoxCodedOption> AFWIJKING_OPENINGSVRAAG_OPTIONS =
+			createDetoxCodedOptions(
+					new DetoxCodedOption("at3",
+							"Het gaat niet goed met mij"),
+					new DetoxCodedOption("at4", "Het gaat goed met mij"));
+	private static final Map<String,DetoxCodedOption> AFWIJKING_GEBRUIK_OPTIONS =
+			createDetoxCodedOptions(
+					new DetoxCodedOption("at15", "Ja, ik heb gebruikt"),
+					new DetoxCodedOption("at16",
+							"Ja, ik ben van plan te gebruiken"),
+					new DetoxCodedOption("at17",
+							"Nee, ik heb niet gebruikt en geen plannen om te gaan gebruiken"));
+	private static final Map<String,DetoxCodedOption> AFWIJKING_ALLEEN_OPTIONS =
+			createDetoxCodedOptions(
+					new DetoxCodedOption("at21", "Ja, ik ben alleen"),
+					new DetoxCodedOption("at22",
+							"Nee, ik ben met mensen die mij steunen"),
+					new DetoxCodedOption("at23",
+							"Nee, ik ben samen met andere mensen"));
+	private static final Map<String,DetoxCodedOption> AFWIJKING_HOE_SNEL_OPTIONS =
+			createDetoxCodedOptions(
+					new DetoxCodedOption("at27", "Binnen een uur"),
+					new DetoxCodedOption("at28", "Binnen een dagdeel"),
+					new DetoxCodedOption("at29",
+							"Bij de volgende afspraak met mijn zorgverlener"));
 
 	/**
 	 * Runs the list query.
@@ -1403,8 +1428,8 @@ public class ProjectControllerExecution {
 		}
 		ZoneId defaultTz = subject != null ? subject.toTimeZone() :
 				user.toTimeZone();
-		CommonCrudController.validateWriteRecordTime(defaultTz, result, map);
 		validateDetoxQueueWriteRecord(table, result, defaultTz, map);
+		CommonCrudController.validateWriteRecordTime(defaultTz, result, map);
 		return result;
 	}
 
@@ -1418,22 +1443,37 @@ public class ProjectControllerExecution {
 		String normalizedType = normalizeDetoxType(detoxMessage.getType());
 		if (normalizedType == null) {
 			throw BadRequestException.withInvalidInput(new HttpFieldError("type",
-					"Unsupported type. Allowed values: heartrate, bloodpressure, detox_dagstart"));
+					"Unsupported type. Allowed values: heartrate, bloodpressure/blood_pressure, detox_dagstart, afwijkingsbeoordeling"));
 		}
 		detoxMessage.setType(normalizedType);
+		if (detoxMessage.getPayload() == null || detoxMessage.getPayload().isBlank()) {
+			String payloadFromRecord = buildDetoxPayloadFromRecordMap(recordMap);
+			if (payloadFromRecord != null)
+				detoxMessage.setPayload(payloadFromRecord);
+		}
 		Map<?,?> payload = parseDetoxPayload(detoxMessage.getPayload());
 		ZoneId payloadZone;
+		Long payloadUtcMillis = null;
 		if ("heartrate".equals(normalizedType)) {
 			requireDetoxNumber(payload, "value");
-			payloadZone = validateDetoxPayloadTime(payload, defaultTz);
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else if ("bloodpressure".equals(normalizedType)) {
 			requireDetoxNumber(payload, "diastolic");
 			requireDetoxNumber(payload, "systolic");
-			if (payload.containsKey("meanArterialPressure"))
+			if (payload.containsKey("meanArterialPressure")) {
 				requireDetoxNumber(payload, "meanArterialPressure");
-			else
+			} else if (payload.containsKey("map")) {
 				requireDetoxNumber(payload, "map");
-			payloadZone = validateDetoxPayloadTime(payload, defaultTz);
+			} else if (payload.containsKey("pulseBpm")) {
+				requireDetoxNumber(payload, "pulseBpm");
+			} else {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"payload",
+							"Missing required field \"meanArterialPressure\", \"map\" or \"pulseBpm\""));
+			}
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else if ("detox_dagstart".equals(normalizedType)) {
 			requireDetoxString(payload, "hoeGaatHetVanochtend",
 					"goedemorgenHoeGaatHetVanochtend",
@@ -1444,15 +1484,58 @@ public class ProjectControllerExecution {
 					"contactMetHulpverlener",
 					"Wil je vandaag contact met jouw hulpverlener?");
 			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("afwijkingsbeoordeling".equals(normalizedType)) {
+			requireDetoxCodedOption(payload, AFWIJKING_OPENINGSVRAAG_OPTIONS,
+					"openingsvraag", "hoeGaatHet", "Hoe gaat het");
+			boolean hebJeHulpNodig = requireDetoxBoolean(payload, "hebJeHulpNodig",
+					"hulpNodig", "Heb je hulp nodig?");
+			String waarHulpNodig = findOptionalDetoxString(payload,
+					"waarHebJeHulpBijNodig",
+					"hulpNodigWaarbij",
+					"Waar heb je hulp bij nodig?");
+			DetoxCodedOption hoeSnel = findDetoxCodedOption(payload,
+					AFWIJKING_HOE_SNEL_OPTIONS,
+					"hoeSnelHulp",
+					"snelheidHulp", "En hoe snel heb je hulp nodig?");
+			if (hebJeHulpNodig &&
+					(waarHulpNodig == null || waarHulpNodig.isBlank())) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"payload",
+						"Missing required field \"waarHebJeHulpBijNodig\""));
+			}
+			if (hebJeHulpNodig && hoeSnel == null) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"payload",
+						"Missing required field \"hoeSnelHulp\""));
+			}
+			findDetoxCodedOption(payload, AFWIJKING_GEBRUIK_OPTIONS, "gebruik",
+					"hebJeGebruiktOfGaJeGebruiken",
+					"Hebje gebruikt, of ben je van plan om te gaan gebruiken?");
+			findDetoxCodedOption(payload, AFWIJKING_ALLEEN_OPTIONS,
+					"alleenOfNiet",
+					"benJeAlleen", "Ben je op dit moment alleen?");
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else {
 			payloadZone = defaultTz != null ? defaultTz : ZoneOffset.UTC;
 		}
-		ZoneId recordZone = recordMap.containsKey("timezone")
-				? detoxMessage.toTimeZone()
-				: payloadZone;
-		ZonedDateTime normalizedTzTime = ZonedDateTime.ofInstant(
-				Instant.ofEpochMilli(detoxMessage.getUtcTime()), recordZone);
-		detoxMessage.updateDateTime(normalizedTzTime);
+		if (payloadUtcMillis != null) {
+			ZoneId zone = payloadZone != null ? payloadZone : ZoneOffset.UTC;
+			ZonedDateTime normalizedTzTime = ZonedDateTime.ofInstant(
+					Instant.ofEpochMilli(payloadUtcMillis), zone);
+			detoxMessage.updateDateTime(normalizedTzTime);
+			return;
+		}
+		if (recordMap.containsKey("utcTime") || recordMap.containsKey("localTime") ||
+				recordMap.containsKey("timezone") || recordMap.containsKey("timeZone")) {
+			ZoneId recordZone = payloadZone != null ? payloadZone : ZoneOffset.UTC;
+			ZoneId explicitRecordZone = parseDetoxPayloadZone(detoxMessage.getTimezone());
+			if (explicitRecordZone != null)
+				recordZone = explicitRecordZone;
+			ZonedDateTime normalizedTzTime = ZonedDateTime.ofInstant(
+					Instant.ofEpochMilli(detoxMessage.getUtcTime()), recordZone);
+			detoxMessage.updateDateTime(normalizedTzTime);
+		}
 	}
 
 	private ZoneId validateDetoxPayloadTime(Map<?,?> payload, ZoneId defaultTz)
@@ -1470,6 +1553,16 @@ public class ProjectControllerExecution {
 			return ZoneId.of(timeZoneValue.toString().trim());
 		} catch (Exception ex) {
 			return defaultTz != null ? defaultTz : ZoneOffset.UTC;
+		}
+	}
+
+	private ZoneId parseDetoxPayloadZone(String zoneValue) {
+		if (zoneValue == null || zoneValue.isBlank())
+			return null;
+		try {
+			return ZoneId.of(zoneValue.trim());
+		} catch (Exception ex) {
+			return null;
 		}
 	}
 
@@ -1493,6 +1586,35 @@ public class ProjectControllerExecution {
 		return map;
 	}
 
+	private String buildDetoxPayloadFromRecordMap(Map<?,?> recordMap)
+			throws HttpException {
+		if (recordMap == null)
+			return null;
+		Map<String,Object> payloadMap = new LinkedHashMap<>();
+		for (Map.Entry<?,?> entry : recordMap.entrySet()) {
+			Object keyObj = entry.getKey();
+			if (!(keyObj instanceof String key))
+				continue;
+			if ("id".equalsIgnoreCase(key) ||
+					"user".equalsIgnoreCase(key) ||
+					"localTime".equalsIgnoreCase(key) ||
+					"utcTime".equalsIgnoreCase(key) ||
+					"timezone".equalsIgnoreCase(key) ||
+					"payload".equalsIgnoreCase(key)) {
+				continue;
+			}
+			payloadMap.put(key, entry.getValue());
+		}
+		if (payloadMap.isEmpty())
+			return null;
+		try {
+			return DETOX_PAYLOAD_JSON_MAPPER.writeValueAsString(payloadMap);
+		} catch (Exception ex) {
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "payload must be valid JSON object text"));
+		}
+	}
+
 	private static String normalizeDetoxType(String type) {
 		if (type == null)
 			return null;
@@ -1503,6 +1625,9 @@ public class ProjectControllerExecution {
 			return "bloodpressure";
 		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
 			return "detox_dagstart";
+		if ("afwijkingsbeoordeling".equals(normalized) ||
+				"afwijking".equals(normalized))
+			return "afwijkingsbeoordeling";
 		return null;
 	}
 
@@ -1577,6 +1702,70 @@ public class ProjectControllerExecution {
 		}
 		throw BadRequestException.withInvalidInput(new HttpFieldError(
 				"payload", "Missing required field \"" + keys[0] + "\""));
+	}
+
+	private static DetoxCodedOption requireDetoxCodedOption(Map<?,?> map,
+			Map<String,DetoxCodedOption> options, String... keys)
+			throws HttpException {
+		DetoxCodedOption option = findDetoxCodedOption(map, options, keys);
+		if (option != null)
+			return option;
+		throw BadRequestException.withInvalidInput(new HttpFieldError(
+				"payload", "Missing required field \"" + keys[0] + "\""));
+	}
+
+	private static DetoxCodedOption findDetoxCodedOption(Map<?,?> map,
+			Map<String,DetoxCodedOption> options, String... keys)
+			throws HttpException {
+		for (String key : keys) {
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			String optionValue = value.toString().trim();
+			DetoxCodedOption option = options.get(optionValue.toLowerCase());
+			if (option == null)
+				option = options.get(normalizeDetoxOptionValue(optionValue));
+			if (option == null) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"payload", "Invalid option field \"" + keys[0] + "\""));
+			}
+			return option;
+		}
+		return null;
+	}
+
+	private static String findOptionalDetoxString(Map<?,?> map, String... keys) {
+		for (String key : keys) {
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			return value.toString();
+		}
+		return null;
+	}
+
+	private static Map<String,DetoxCodedOption> createDetoxCodedOptions(
+			DetoxCodedOption... options) {
+		Map<String,DetoxCodedOption> result = new LinkedHashMap<>();
+		for (DetoxCodedOption option : options) {
+			result.put(option.codeString.toLowerCase(), option);
+			result.put(normalizeDetoxOptionValue(option.value), option);
+		}
+		return result;
+	}
+
+	private static String normalizeDetoxOptionValue(String value) {
+		return value.toLowerCase().replaceAll("[^\\p{L}\\p{Nd}]+", "");
+	}
+
+	private static class DetoxCodedOption {
+		private final String codeString;
+		private final String value;
+
+		private DetoxCodedOption(String codeString, String value) {
+			this.codeString = codeString;
+			this.value = value;
+		}
 	}
 
 	/**
