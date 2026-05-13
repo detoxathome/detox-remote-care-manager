@@ -333,6 +333,7 @@ public class PushNotificationService {
 		}
 		PushMessageData data = new PushMessageData(update.project, update.user,
 				update.table);
+		data.setEnvironment(getPushEnvironment());
 		Map<String,String> dataMap = data.toFcmMap();
 		logger.info("Sending push message: " + dataMap);
 		for (SyncPushRegistration reg : updateRegs) {
@@ -363,6 +364,27 @@ public class PushNotificationService {
 			}
 		}
 		return true;
+	}
+
+	private String getPushEnvironment() {
+		Configuration config = AppComponents.get(Configuration.class);
+		String environment = config.get(Configuration.MOBILE_ENVIRONMENT);
+		if (environment == null)
+			return null;
+		environment = environment.trim().toLowerCase(Locale.ROOT);
+		if (environment.isEmpty())
+			return null;
+		if (environment.equals("local") || environment.equals("development") ||
+				environment.equals("dev")) {
+			return "local";
+		}
+		if (environment.equals("production") || environment.equals("prod") ||
+				environment.equals("utwente")) {
+			return "production";
+		}
+		if (environment.equals("custom"))
+			return "custom";
+		return null;
 	}
 
 	private void unregisterOnError(DatabaseTableUserKey key,
