@@ -48,6 +48,15 @@ public class Configuration extends BaseConfiguration {
 	
 	public static final String WEB_URL = "webUrl";
 
+	public static final String MOBILE_ENVIRONMENT = "mobileEnvironment";
+	public static final String MOBILE_API_BASE_URL = "mobileApiBaseUrl";
+	public static final String MOBILE_FIREBASE_OVERRIDES =
+			"mobileFirebaseOverrides";
+	public static final String FIREBASE_APP_ID = "firebaseAppId";
+	public static final String FIREBASE_API_KEY = "firebaseApiKey";
+	public static final String FIREBASE_PROJECT_ID = "firebaseProjectId";
+	public static final String FIREBASE_SENDER_ID = "firebaseSenderId";
+
 	public static final String DETOX_OUTGOING_MODE = "detoxOutgoingMode";
 	public static final String DETOX_OUTGOING_LOCAL_URL =
 			"detoxOutgoingLocalUrl";
