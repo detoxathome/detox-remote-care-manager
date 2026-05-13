@@ -11,6 +11,7 @@ public class PushMessageData extends JsonObject {
 	private String project;
 	private String user = null;
 	private String table;
+	private String environment = null;
 	
 	public PushMessageData() {
 	}
@@ -62,12 +63,22 @@ public class PushMessageData extends JsonObject {
 		this.table = table;
 	}
 
+	public String getEnvironment() {
+		return environment;
+	}
+
+	public void setEnvironment(String environment) {
+		this.environment = environment;
+	}
+
 	public Map<String,String> toFcmMap() {
 		Map<String,String> map = new LinkedHashMap<>();
 		map.put("project", project);
 		if (user != null)
 			map.put("user", user);
 		map.put("table", table);
+		if (environment != null)
+			map.put("environment", environment);
 		return map;
 	}
 }

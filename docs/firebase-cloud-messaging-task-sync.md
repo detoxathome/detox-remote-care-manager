@@ -206,6 +206,19 @@ The patient app expects the FCM data payload to contain:
 - `user`
 - `table`
 
+The middleware also sends:
+
+- `environment` when `ssaconfigMobileEnvironment` can be normalized to one of
+  `local`, `production`, or `custom`
+
+This environment hint helps the app ignore pushes for a different middleware
+target when multiple environments share the same Firebase project.
+
+The middleware does not currently send `baseUrl` or `apiBaseUrl` in push
+messages, because those values must exactly match the device-facing URL
+provisioned into the app. For local development, that string may differ between
+emulators, physical devices, and desktop-visible URLs.
+
 The patient app subscribes to updates for:
 
 - `task_refresh_requests`
