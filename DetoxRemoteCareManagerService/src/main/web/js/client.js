@@ -115,6 +115,17 @@ class RemoteCareManagerClient {
 		});
 	}
 
+	getDetoxOnsLookup(onsId, onsInstance = null) {
+		let url = servicePath + '/user/detox/ons-lookup?onsId=' +
+			encodeURIComponent(onsId);
+		if (onsInstance)
+			url += '&onsInstance=' + encodeURIComponent(onsInstance);
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
 	/**
 	 * Calls endpoint GET /download/projects
 	 */
@@ -157,6 +168,98 @@ class RemoteCareManagerClient {
 			type: 'DELETE',
 			url: url,
 			mimeType: 'text/plain'
+		});
+	}
+
+	getDetoxSubjects(project, includeInactive = false) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/detox-subjects?includeInactive=' +
+			encodeURIComponent(includeInactive);
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
+	createDetoxTaskRefresh(project, subject) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/detox-subject/' + encodeURIComponent(subject) + '/task-refresh';
+		return $.ajax({
+			type: 'POST',
+			url: url
+		});
+	}
+
+	getProjectLastRecord(project, table, subject = null) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table) + '/last';
+		if (subject)
+			url += '?user=' + encodeURIComponent(subject);
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
+	getProjectLastRecordWithFilter(project, table, subject, filter) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table) + '/filter/get/last';
+		if (subject)
+			url += '?user=' + encodeURIComponent(subject);
+		let data = {};
+		if (filter)
+			data.filter = filter;
+		return $.ajax({
+			type: 'POST',
+			url: url,
+			data: JSON.stringify(data),
+			contentType: 'application/json'
+		});
+	}
+
+	insertProjectRecords(project, table, subject, records) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table);
+		if (subject)
+			url += '?user=' + encodeURIComponent(subject);
+		return $.ajax({
+			type: 'POST',
+			url: url,
+			data: JSON.stringify(records),
+			contentType: 'application/json'
+		});
+	}
+
+	registerProjectTableWatch(project, table, subject, reset = false) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table) + '/watch/register?reset=' +
+			encodeURIComponent(reset);
+		if (subject)
+			url += '&user=' + encodeURIComponent(subject);
+		return $.ajax({
+			type: 'POST',
+			url: url,
+			mimeType: 'text/plain'
+		});
+	}
+
+	watchProjectTable(project, table, registrationId) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table) + '/watch/' +
+			encodeURIComponent(registrationId);
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
+	unregisterProjectTableWatch(project, table, registrationId) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/table/' + encodeURIComponent(table) + '/watch/unregister/' +
+			encodeURIComponent(registrationId);
+		return $.ajax({
+			type: 'POST',
+			url: url
 		});
 	}
 
