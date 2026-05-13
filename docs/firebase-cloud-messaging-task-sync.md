@@ -166,9 +166,10 @@ If `ssaconfigMobileApiBaseUrl` is empty, the middleware falls back to
 `ssaconfigBaseUrl + /v{version}` for `apiBaseUrl`.
 
 These Firebase values are client identifiers, not Firebase Admin credentials.
-They are only emitted automatically when `ssaconfigMobileEnvironment=custom`.
+When all four Firebase values are configured, they are emitted automatically
+for `ssaconfigMobileEnvironment=local` and `ssaconfigMobileEnvironment=custom`.
 Use `ssaconfigMobileFirebaseOverrides=true` to force Firebase override fields
-into the QR code, or `false` to force omitting them.
+into the QR code for any environment, or `false` to force omitting them.
 Do not put `GOOGLE_APPLICATION_CREDENTIALS`, service-account JSON, JWT secrets,
 admin passwords, or mTLS private keys in the QR code.
 
