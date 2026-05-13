@@ -99,6 +99,8 @@ public class ProjectControllerExecution {
 					new DetoxCodedOption("at28", "Binnen een dagdeel"),
 					new DetoxCodedOption("at29",
 							"Bij de volgende afspraak met mijn zorgverlener"));
+	private static final int[] DASS21_ITEM_IDS = new int[] {52, 12, 14, 16, 18,
+			20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50};
 
 	/**
 	 * Runs the list query.
@@ -1766,7 +1768,7 @@ public class ProjectControllerExecution {
 		String normalizedType = normalizeDetoxType(detoxMessage.getType());
 		if (normalizedType == null) {
 			throw BadRequestException.withInvalidInput(new HttpFieldError("type",
-					"Unsupported type. Allowed values: heartrate, bloodpressure/blood_pressure, detox_dagstart, afwijkingsbeoordeling"));
+					"Unsupported type. Allowed values: heartrate, bloodpressure/blood_pressure, detox_dagstart, afwijkingsbeoordeling, vas, sos, dass21, temperature, saturation, bac"));
 		}
 		detoxMessage.setType(normalizedType);
 		if (detoxMessage.getPayload() == null || detoxMessage.getPayload().isBlank()) {
@@ -1774,7 +1776,8 @@ public class ProjectControllerExecution {
 			if (payloadFromRecord != null)
 				detoxMessage.setPayload(payloadFromRecord);
 		}
-		Map<?,?> payload = parseDetoxPayload(detoxMessage.getPayload());
+		Map<String,Object> payload = normalizeDetoxPayload(
+				parseDetoxPayload(detoxMessage.getPayload()), normalizedType);
 		ZoneId payloadZone;
 		Long payloadUtcMillis = null;
 		if ("heartrate".equals(normalizedType)) {
@@ -1797,6 +1800,30 @@ public class ProjectControllerExecution {
 			}
 			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
 			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("vas".equals(normalizedType)) {
+			requireDetoxNumber(payload, "value");
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("sos".equals(normalizedType)) {
+			requireDetoxQuestionnaireAnswers(payload, 33, 0, 4);
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("dass21".equals(normalizedType)) {
+			requireDetoxQuestionnaireAnswers(payload, DASS21_ITEM_IDS.length, 0, 3);
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("temperature".equals(normalizedType)) {
+			requireDetoxNumber(payload, "value");
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("saturation".equals(normalizedType)) {
+			requireDetoxNumber(payload, "value");
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
+		} else if ("bac".equals(normalizedType)) {
+			requireDetoxNumber(payload, "value");
+			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else if ("detox_dagstart".equals(normalizedType)) {
 			requireDetoxString(payload, "hoeGaatHetVanochtend",
 					"goedemorgenHoeGaatHetVanochtend",
@@ -1808,36 +1835,7 @@ public class ProjectControllerExecution {
 					"Wil je vandaag contact met jouw hulpverlener?");
 			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else if ("afwijkingsbeoordeling".equals(normalizedType)) {
-			requireDetoxCodedOption(payload, AFWIJKING_OPENINGSVRAAG_OPTIONS,
-					"openingsvraag", "hoeGaatHet", "Hoe gaat het");
-			boolean hebJeHulpNodig = requireDetoxBoolean(payload, "hebJeHulpNodig",
-					"hulpNodig", "Heb je hulp nodig?");
-			String waarHulpNodig = findOptionalDetoxString(payload,
-					"waarHebJeHulpBijNodig",
-					"hulpNodigWaarbij",
-					"Waar heb je hulp bij nodig?");
-			DetoxCodedOption hoeSnel = findDetoxCodedOption(payload,
-					AFWIJKING_HOE_SNEL_OPTIONS,
-					"hoeSnelHulp",
-					"snelheidHulp", "En hoe snel heb je hulp nodig?");
-			if (hebJeHulpNodig &&
-					(waarHulpNodig == null || waarHulpNodig.isBlank())) {
-				throw BadRequestException.withInvalidInput(new HttpFieldError(
-						"payload",
-						"Missing required field \"waarHebJeHulpBijNodig\""));
-			}
-			if (hebJeHulpNodig && hoeSnel == null) {
-				throw BadRequestException.withInvalidInput(new HttpFieldError(
-						"payload",
-						"Missing required field \"hoeSnelHulp\""));
-			}
-			findDetoxCodedOption(payload, AFWIJKING_GEBRUIK_OPTIONS, "gebruik",
-					"hebJeGebruiktOfGaJeGebruiken",
-					"Hebje gebruikt, of ben je van plan om te gaan gebruiken?");
-			findDetoxCodedOption(payload, AFWIJKING_ALLEEN_OPTIONS,
-					"alleenOfNiet",
-					"benJeAlleen", "Ben je op dit moment alleen?");
-			payloadUtcMillis = requireDetoxLong(payload, "timestampUtcMillis");
+			payloadUtcMillis = findOptionalDetoxLong(payload, "timestampUtcMillis");
 			payloadZone = resolveDetoxPayloadZone(payload, defaultTz);
 		} else {
 			payloadZone = defaultTz != null ? defaultTz : ZoneOffset.UTC;
@@ -1889,7 +1887,8 @@ public class ProjectControllerExecution {
 		}
 	}
 
-	private Map<?,?> parseDetoxPayload(String payloadValue) throws HttpException {
+	private Map<String,Object> parseDetoxPayload(String payloadValue)
+			throws HttpException {
 		if (payloadValue == null || payloadValue.isBlank()) {
 			throw BadRequestException.withInvalidInput(new HttpFieldError(
 					"payload", "payload must be a non-empty JSON object string"));
@@ -1906,7 +1905,175 @@ public class ProjectControllerExecution {
 			throw BadRequestException.withInvalidInput(new HttpFieldError(
 					"payload", "payload must be a JSON object"));
 		}
-		return map;
+		@SuppressWarnings("unchecked")
+		Map<String,Object> result = (Map<String,Object>)map;
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> normalizeDetoxPayload(Map<String,Object> payload,
+			String expectedType) {
+		if ("afwijkingsbeoordeling".equals(expectedType) &&
+				payload.get("values") instanceof Map<?,?> valuesMap) {
+			Map<String,Object> normalized = flattenAfwijkingsValues(valuesMap);
+			copyIfAbsentDetox(normalized, "timestampUtcMillis", payload,
+					"timestampUtcMillis");
+			copyIfAbsentDetox(normalized, "timeZone", payload, "timeZone");
+			copyIfAbsentDetox(normalized, "localTime", payload, "localTime");
+			return normalized;
+		}
+		Map<String,Object> result = payload;
+		Map<String,Object> selectedValue = null;
+		if (payload.get("values") instanceof Map<?,?> valuesMap) {
+			selectedValue = selectDetoxWrappedPayloadValue(valuesMap, expectedType);
+			if (selectedValue != null &&
+					selectedValue.get("result") instanceof Map<?,?> resultMap) {
+				result = (Map<String,Object>)resultMap;
+			} else if (selectedValue != null) {
+				result = selectedValue;
+			}
+		} else if (payload.get("result") instanceof Map<?,?> resultMap) {
+			result = (Map<String,Object>)resultMap;
+		}
+		Map<String,Object> normalized = new LinkedHashMap<>(result);
+		copyIfAbsentDetox(normalized, "timestampUtcMillis", payload,
+				"timestampUtcMillis");
+		copyIfAbsentDetox(normalized, "timeZone", payload, "timeZone");
+		copyIfAbsentDetox(normalized, "localTime", payload, "localTime");
+		if (selectedValue != null) {
+			copyIfAbsentDetox(normalized, "inputDefinitionId", selectedValue,
+					"inputDefinitionId");
+		}
+		return normalized;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> flattenAfwijkingsValues(Map<?,?> valuesMap) {
+		Map<String,Object> result = new LinkedHashMap<>();
+		List<Object> orderedValues = new ArrayList<>();
+		for (Map.Entry<?,?> entry : valuesMap.entrySet()) {
+			if (!(entry.getValue() instanceof Map<?,?> valueMap))
+				continue;
+			Map<String,Object> typedValue = (Map<String,Object>)valueMap;
+			Map<String,Object> response = typedValue;
+			if (typedValue.get("result") instanceof Map<?,?> resultMap)
+				response = (Map<String,Object>)resultMap;
+			Object extracted = extractResultValue(response);
+			if (extracted == null)
+				continue;
+			orderedValues.add(extracted);
+			String inputId = findOptionalDetoxString(response, "inputDefinitionId");
+			if (inputId == null || inputId.isBlank()) {
+				inputId = findOptionalDetoxString(typedValue, "inputDefinitionId");
+			}
+			if (inputId == null || inputId.isBlank()) {
+				inputId = entry.getKey() != null ? entry.getKey().toString() : null;
+			}
+			String normalizedInputId = normalizeDetoxOptionValue(inputId != null ?
+					inputId : "");
+			if ("deviationhowareyou".equals(normalizedInputId)) {
+				result.put("openingsvraag", extracted);
+			} else if ("deviationneedshelp".equals(normalizedInputId)) {
+				result.put("hebJeHulpNodig", extracted);
+			} else if ("deviationhelprequest".equals(normalizedInputId)) {
+				result.put("waarHebJeHulpBijNodig", extracted);
+			} else if ("deviationsubstanceuserisk".equals(normalizedInputId)) {
+				result.put("gebruik", extracted);
+			} else if ("deviationisalone".equals(normalizedInputId)) {
+				result.put("alleenOfNiet", extracted);
+			} else if ("deviationtrustedenvironment".equals(normalizedInputId)) {
+				result.put("vertrouwdeOmgeving", extracted);
+			} else if ("deviationhelpurgency".equals(normalizedInputId)) {
+				result.put("hoeSnelHulp", extracted);
+			}
+		}
+		String[] fallbackOrder = new String[] {"openingsvraag", "hebJeHulpNodig",
+				"waarHebJeHulpBijNodig", "gebruik", "alleenOfNiet",
+				"vertrouwdeOmgeving", "hoeSnelHulp"};
+		for (int i = 0; i < fallbackOrder.length && i < orderedValues.size(); i++) {
+			result.putIfAbsent(fallbackOrder[i], orderedValues.get(i));
+		}
+		return result;
+	}
+
+	private Object extractResultValue(Map<String,Object> resultMap) {
+		if (resultMap.containsKey("text"))
+			return resultMap.get("text");
+		if (resultMap.containsKey("value"))
+			return resultMap.get("value");
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> selectDetoxWrappedPayloadValue(Map<?,?> valuesMap,
+			String expectedType) {
+		Map<String,Object> firstMap = null;
+		for (Map.Entry<?,?> entry : valuesMap.entrySet()) {
+			if (!(entry.getValue() instanceof Map<?,?> valueMap))
+				continue;
+			Map<String,Object> candidate = (Map<String,Object>)valueMap;
+			if (firstMap == null)
+				firstMap = candidate;
+			Map<String,Object> candidateResult = candidate;
+			if (candidate.get("result") instanceof Map<?,?> resultMap) {
+				candidateResult = (Map<String,Object>)resultMap;
+			}
+			String inferredType = inferDetoxTypeFromPayload(candidateResult,
+					entry.getKey() != null ? entry.getKey().toString() : null);
+			if (expectedType != null && expectedType.equals(inferredType))
+				return candidate;
+		}
+		return firstMap;
+	}
+
+	private void copyIfAbsentDetox(Map<String,Object> target, String targetKey,
+			Map<String,Object> source, String sourceKey) {
+		if (target.containsKey(targetKey))
+			return;
+		if (!source.containsKey(sourceKey))
+			return;
+		target.put(targetKey, source.get(sourceKey));
+	}
+
+	private String inferDetoxTypeFromPayload(Map<String,Object> payload,
+			String fallbackInputDefinition) {
+		String directType = normalizeDetoxType(findOptionalDetoxString(payload,
+				"type"));
+		if (directType != null)
+			return directType;
+		String inputDefinition = findOptionalDetoxString(payload,
+				"inputDefinitionId");
+		if (inputDefinition == null || inputDefinition.isBlank())
+			inputDefinition = fallbackInputDefinition;
+		if (inputDefinition == null)
+			return directType;
+		String normalizedId = inputDefinition.toLowerCase()
+				.replaceAll("[_\\s\\-/]", "");
+		String payloadType = findOptionalDetoxString(payload, "type");
+		if ("questionnaire".equalsIgnoreCase(payloadType)) {
+			if (normalizedId.contains("sos"))
+				return "sos";
+			if (normalizedId.contains("dass21"))
+				return "dass21";
+		}
+		if (normalizedId.contains("bloodpressure"))
+			return "bloodpressure";
+		if (normalizedId.contains("heartrate"))
+			return "heartrate";
+		if (normalizedId.contains("dagstart"))
+			return "detox_dagstart";
+		if (normalizedId.contains("afwijking") || normalizedId.contains("deviation"))
+			return "afwijkingsbeoordeling";
+		if (normalizedId.contains("cravingvas") || normalizedId.equals("vas"))
+			return "vas";
+		if (normalizedId.contains("temperature"))
+			return "temperature";
+		if (normalizedId.contains("saturation") || normalizedId.contains("spo2"))
+			return "saturation";
+		if (normalizedId.contains("bac") ||
+				normalizedId.contains("bloodalcohol"))
+			return "bac";
+		return directType;
 	}
 
 	private String buildDetoxPayloadFromRecordMap(Map<?,?> recordMap)
@@ -1942,15 +2109,39 @@ public class ProjectControllerExecution {
 		if (type == null)
 			return null;
 		String normalized = type.toLowerCase().replaceAll("[_\\s-]", "");
-		if ("heartrate".equals(normalized) || "heart".equals(normalized))
+		if ("heartrate".equals(normalized) || "heart".equals(normalized) ||
+				"pulse".equals(normalized))
 			return "heartrate";
 		if ("bloodpressure".equals(normalized) || "blood".equals(normalized))
 			return "bloodpressure";
 		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
 			return "detox_dagstart";
 		if ("afwijkingsbeoordeling".equals(normalized) ||
-				"afwijking".equals(normalized))
+				"afwijking".equals(normalized) ||
+				"deviationassessmentquestions".equals(normalized))
 			return "afwijkingsbeoordeling";
+		if ("vas".equals(normalized) || "cravingvas".equals(normalized))
+			return "vas";
+		if ("sos".equals(normalized) ||
+				"subjectieveonthoudingsschaal".equals(normalized) ||
+				"questionnairesos".equals(normalized))
+			return "sos";
+		if ("dass21".equals(normalized) ||
+				"depressieangststress".equals(normalized) ||
+				"questionnairedass21".equals(normalized))
+			return "dass21";
+		if ("temperature".equals(normalized) ||
+				"temperatuur".equals(normalized) ||
+				"bodytemperature".equals(normalized))
+			return "temperature";
+		if ("saturation".equals(normalized) || "saturatie".equals(normalized) ||
+				"spo2".equals(normalized))
+			return "saturation";
+		if ("bac".equals(normalized) ||
+				"bloodalcoholconcentration".equals(normalized) ||
+				"bloodalcohol".equals(normalized) ||
+				"alcoholpromillage".equals(normalized))
+			return "bac";
 		return null;
 	}
 
@@ -1982,6 +2173,24 @@ public class ProjectControllerExecution {
 			throw BadRequestException.withInvalidInput(new HttpFieldError(
 					"payload", "Missing required field \"" + key + "\""));
 		}
+		if (value instanceof Number number)
+			return number.longValue();
+		if (value instanceof String stringValue) {
+			try {
+				return Long.parseLong(stringValue);
+			} catch (NumberFormatException ignored) {
+				// throw below
+			}
+		}
+		throw BadRequestException.withInvalidInput(new HttpFieldError("payload",
+				"Invalid numeric field \"" + key + "\""));
+	}
+
+	private static Long findOptionalDetoxLong(Map<?,?> map, String key)
+			throws HttpException {
+		Object value = map.get(key);
+		if (value == null)
+			return null;
 		if (value instanceof Number number)
 			return number.longValue();
 		if (value instanceof String stringValue) {
@@ -2065,6 +2274,55 @@ public class ProjectControllerExecution {
 			return value.toString();
 		}
 		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String,Object> requireDetoxAnswersMap(Map<?,?> payload)
+			throws HttpException {
+		Object answers = payload.get("answers");
+		if (!(answers instanceof Map<?,?> answerMap)) {
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "Missing required field \"answers\""));
+		}
+		return (Map<String,Object>)answerMap;
+	}
+
+	private static void requireDetoxQuestionnaireAnswers(Map<?,?> payload,
+			int questionCount, int minValue, int maxValue) throws HttpException {
+		Map<String,Object> answers = requireDetoxAnswersMap(payload);
+		for (int i = 1; i <= questionCount; i++) {
+			String key = String.format("q%02d", i);
+			requireDetoxIntInRange(answers, key, minValue, maxValue);
+		}
+	}
+
+	private static void requireDetoxIntInRange(Map<?,?> map, String key,
+			int minValue, int maxValue) throws HttpException {
+		Object value = map.get(key);
+		if (value == null) {
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "Missing required numeric field \"" + key + "\""));
+		}
+		double numberValue;
+		if (value instanceof Number number) {
+			numberValue = number.doubleValue();
+		} else if (value instanceof String stringValue) {
+			try {
+				numberValue = Double.parseDouble(stringValue);
+			} catch (NumberFormatException ex) {
+				throw BadRequestException.withInvalidInput(new HttpFieldError(
+						"payload", "Invalid numeric field \"" + key + "\""));
+			}
+		} else {
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "Invalid numeric field \"" + key + "\""));
+		}
+		long rounded = Math.round(numberValue);
+		if (Math.abs(numberValue - rounded) > 0.000001d ||
+				rounded < minValue || rounded > maxValue) {
+			throw BadRequestException.withInvalidInput(new HttpFieldError(
+					"payload", "Invalid numeric field \"" + key + "\""));
+		}
 	}
 
 	private static Map<String,DetoxCodedOption> createDetoxCodedOptions(
