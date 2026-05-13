@@ -613,7 +613,17 @@ public class UserController {
 				Configuration.MOBILE_FIREBASE_OVERRIDES));
 		if (configured != null)
 			return isTruthy(configured);
-		return "custom".equalsIgnoreCase(environment);
+		if (!hasFirebaseOverrideValues(config))
+			return false;
+		return "custom".equalsIgnoreCase(environment) ||
+				"local".equalsIgnoreCase(environment);
+	}
+
+	private boolean hasFirebaseOverrideValues(Configuration config) {
+		return trimToNull(config.get(Configuration.FIREBASE_APP_ID)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_API_KEY)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_PROJECT_ID)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_SENDER_ID)) != null;
 	}
 
 	private boolean isTruthy(String value) {
