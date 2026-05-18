@@ -31,8 +31,10 @@ class RemoteTaskEditorPage {
 		this._refreshStepCard = $('#remote-task-step-refresh');
 		this._editStepCard = $('#remote-task-step-edit');
 		this._publishStepCard = $('#remote-task-step-publish');
+		this._verifyStepCard = $('#remote-task-step-verify');
 		this._status = $('#remote-task-status');
 		this._banner = $('#remote-task-banner');
+		this._verifyStatus = $('#remote-task-verification-status');
 		this._subjectSelect = $('#remote-task-subject-select');
 		this._list = $('#remote-task-list');
 		this._listSummary = $('#remote-task-list-summary');
@@ -51,6 +53,7 @@ class RemoteTaskEditorPage {
 		this._answerableOnWatch = $('#remote-task-answerable-watch');
 		this._maxPerDay = $('#remote-task-max-per-day');
 		this._minInterval = $('#remote-task-min-interval');
+		this._verificationState = this._createVerificationState();
 		checkLogin((data) => this._onGetUserDone(data));
 	}
 
@@ -83,6 +86,7 @@ class RemoteTaskEditorPage {
 		$('#remote-task-reload-latest').on('click', () => this._reloadLatest());
 		$('#remote-task-discard-draft').on('click', () => this._discardDraft());
 		$('#remote-task-publish').on('click', () => this._publish());
+		$('#remote-task-verify').on('click', () => this._verifyPublishedSnapshot());
 		$('#remote-task-add').on('click', () => this._addTask());
 		$('#remote-task-duplicate').on('click', () => this._duplicateTask());
 		$('#remote-task-delete').on('click', () => this._deleteTask());
@@ -112,6 +116,7 @@ class RemoteTaskEditorPage {
 			return undefined;
 		});
 
+		this._renderVerificationState();
 		this._updateStepState();
 		this._applyUrlParams();
 	}
@@ -296,6 +301,7 @@ class RemoteTaskEditorPage {
 		this._editorLoaded = false;
 		this._stopWatching();
 		this._startWatching(subjectId);
+		this._resetVerificationState(subjectId);
 		this._setBusy(true);
 		this._setStatus(this._t('status_loading_snapshot'));
 		this._client.getProjectLastRecord(this._project, this._table, subjectId)
@@ -428,6 +434,7 @@ class RemoteTaskEditorPage {
 			this._setBanner('warning', warningMessage);
 		this._renderTaskList();
 		this._renderDetail();
+		this._renderVerificationState();
 		this._updateStatusText(requestToken);
 		this._updateStepState();
 	}
@@ -609,13 +616,29 @@ class RemoteTaskEditorPage {
 				};
 				this._client.insertProjectRecords(this._project, this._table,
 						this._selectedSubject, [record])
-					.done(() => {
-						this._setBusy(false);
+					.done((recordIds) => {
 						this._clearStoredDraft(this._selectedSubject);
 						this._dirty = false;
 						this._stale = false;
-						this._setBanner('warning', this._t('warning_publish_success'));
-						this._startEditSession(this._selectedSubject, false);
+						const publishedRecordId = Array.isArray(recordIds) &&
+								recordIds.length > 0 ? recordIds[0] : null;
+						const effectiveRecordId = publishedRecordId ||
+							this._baseRecordId;
+						this._currentSnapshot = {
+							id: effectiveRecordId,
+							xml: xml,
+							source: DetoxTaskConfigurationSource.WEB,
+							editorUser: this._user && this._user.email ?
+								this._user.email : null
+						};
+						this._baseRecordId = effectiveRecordId;
+						this._latestRecordId = effectiveRecordId;
+						this._clearBanner();
+						this._renderVerificationState();
+						this._updateStatusText(null);
+						this._updateStepState();
+						this._startVerification(this._selectedSubject,
+							effectiveRecordId, xml);
 					})
 					.fail((xhr) => {
 						this._setBusy(false);
@@ -751,6 +774,7 @@ class RemoteTaskEditorPage {
 		this._baseRecordId = null;
 		this._latestRecordId = null;
 		this._currentSnapshot = null;
+		this._resetVerificationState(null);
 		this._renderTaskList();
 		this._renderDetail();
 		this._updateStepState();
@@ -790,6 +814,15 @@ class RemoteTaskEditorPage {
 		}
 		if (requestToken)
 			parts.push(this._t('status_refresh_token', { token: requestToken }));
+		if (this._verificationState.subjectId === this._selectedSubject) {
+			if (this._verificationState.status === 'pending') {
+				parts.push(this._t('status_verification_pending'));
+			} else if (this._verificationState.status === 'verified') {
+				parts.push(this._t('status_verification_verified'));
+			} else if (this._verificationState.status === 'mismatch') {
+				parts.push(this._t('status_verification_mismatch'));
+			}
+		}
 		if (this._stale)
 			parts.push(this._t('status_stale_draft'));
 		else if (this._dirty)
@@ -805,6 +838,7 @@ class RemoteTaskEditorPage {
 		$('#remote-task-reload-latest').prop('disabled', isBusy);
 		$('#remote-task-discard-draft').prop('disabled', isBusy);
 		$('#remote-task-publish').prop('disabled', isBusy);
+		$('#remote-task-verify').prop('disabled', isBusy);
 		$('#remote-task-add').prop('disabled', isBusy);
 		$('#remote-task-duplicate').prop('disabled', isBusy);
 		$('#remote-task-delete').prop('disabled', isBusy);
@@ -819,14 +853,28 @@ class RemoteTaskEditorPage {
 		const editReady = hasSubject && this._editorLoaded;
 		const publishReady = editReady && this._dirty && !this._stale &&
 			!this._busy;
+		const verifyReady = editReady && !this._dirty && !this._stale &&
+			!!this._currentSnapshot &&
+			this._currentSnapshot.source === DetoxTaskConfigurationSource.WEB;
+		const verificationPending = this._verificationState.subjectId ===
+				this._selectedSubject &&
+			this._verificationState.status === 'pending';
+		const verificationVisible = verifyReady ||
+			(this._verificationState.subjectId === this._selectedSubject &&
+				this._verificationState.status !== 'idle');
 
 		let currentStep = 'patient';
-		if (publishReady)
+		if (verificationPending ||
+				(verificationVisible && this._verificationState.status !== 'idle' &&
+					!publishReady)) {
+			currentStep = 'verify';
+		} else if (publishReady) {
 			currentStep = 'publish';
-		else if (editReady)
+		} else if (editReady) {
 			currentStep = 'edit';
-		else if (hasSubject)
+		} else if (hasSubject) {
 			currentStep = 'refresh';
+		}
 
 		this._setStepCardState(this._patientStepCard, true,
 			currentStep === 'patient');
@@ -836,12 +884,16 @@ class RemoteTaskEditorPage {
 			currentStep === 'edit');
 		this._setStepCardState(this._publishStepCard, publishReady,
 			currentStep === 'publish');
+		this._setStepCardState(this._verifyStepCard, verificationVisible,
+			currentStep === 'verify');
 
 		if (!this._busy) {
 			$('#remote-task-refresh-app').prop('disabled', !hasSubject);
 			$('#remote-task-reload-latest').prop('disabled', !hasSubject);
 			$('#remote-task-discard-draft').prop('disabled', !editReady);
 			$('#remote-task-publish').prop('disabled', !publishReady);
+			$('#remote-task-verify').prop('disabled',
+				!verifyReady || verificationPending);
 			$('#remote-task-add').prop('disabled', !editReady);
 			$('#remote-task-duplicate').prop('disabled',
 				!editReady || this._selectedTaskIndex < 0);
@@ -862,6 +914,65 @@ class RemoteTaskEditorPage {
 
 	_setStatus(message) {
 		this._status.text(message || '');
+	}
+
+	_createVerificationState() {
+		return {
+			status: 'idle',
+			message: '',
+			subjectId: null,
+			recordId: null,
+			requestToken: null
+		};
+	}
+
+	_resetVerificationState(subjectId = null) {
+		this._verificationState = this._createVerificationState();
+		this._verificationState.subjectId = subjectId;
+		this._renderVerificationState();
+	}
+
+	_setVerificationState(status, message, extra = {}) {
+		this._verificationState = Object.assign(
+			this._createVerificationState(),
+			this._verificationState,
+			extra,
+			{
+				status: status,
+				message: message || ''
+			}
+		);
+		this._renderVerificationState();
+		this._updateStatusText(this._verificationState.requestToken);
+		this._updateStepState();
+	}
+
+	_renderVerificationState() {
+		let message = '';
+		let statusClass = '';
+		const state = this._verificationState;
+		if (!this._selectedSubject) {
+			message = this._t('verify_status_select_patient');
+		} else if (!this._currentSnapshot ||
+				this._currentSnapshot.source !== DetoxTaskConfigurationSource.WEB) {
+			message = this._t('verify_status_waiting_for_publish');
+		} else if (this._dirty || this._stale) {
+			message = this._t('verify_status_publish_or_reload');
+		} else {
+			message = state.message || this._t('verify_status_ready');
+			if (state.status === 'verified') {
+				statusClass = 'is-success';
+			} else if (state.status === 'mismatch' ||
+					state.status === 'timeout') {
+				statusClass = 'is-warning';
+			} else if (state.status === 'failed') {
+				statusClass = 'is-error';
+			}
+		}
+		this._verifyStatus
+			.removeClass('is-success is-warning is-error')
+			.addClass(statusClass)
+			.text(message);
 	}
 
 	_setBanner(type, message) {
@@ -1034,6 +1145,188 @@ class RemoteTaskEditorPage {
 			doc.documentElement.appendChild(taskElement);
 		}
 		return new XMLSerializer().serializeToString(doc);
+	}
+
+	_verifyPublishedSnapshot() {
+		if (!this._selectedSubject || this._dirty || this._stale ||
+				!this._currentSnapshot ||
+				this._currentSnapshot.source !== DetoxTaskConfigurationSource.WEB) {
+			return;
+		}
+		this._startVerification(this._selectedSubject, this._currentSnapshot.id,
+			this._currentSnapshot.xml);
+	}
+
+	_startVerification(subjectId, publishedRecordId, publishedXml) {
+		let publishedSignature;
+		try {
+			publishedSignature = this._taskSetSignatureFromXml(publishedXml);
+		} catch (error) {
+			this._setBusy(false);
+			this._setVerificationState('failed',
+				this._t('verify_status_prepare_failed',
+					{ message: error.message }),
+				{ subjectId: subjectId, recordId: publishedRecordId });
+			this._setBanner('error',
+				this._t('verify_status_prepare_failed',
+					{ message: error.message }));
+			return;
+		}
+
+		const summary = this._selectedSubjectSummary;
+		const initialMessage = summary && !summary.pushReady ?
+			this._t('verify_status_request_no_push') :
+			this._t('verify_status_request');
+		this._setBusy(true);
+		this._setVerificationState('pending', initialMessage, {
+			subjectId: subjectId,
+			recordId: publishedRecordId
+		});
+		this._client.createDetoxTaskRefresh(this._project, subjectId)
+			.done((result) => {
+				this._setVerificationState('pending',
+					this._t('verify_status_waiting'),
+					{
+						subjectId: subjectId,
+						recordId: publishedRecordId,
+						requestToken: result.requestToken
+					});
+				this._pollForVerificationSnapshot(subjectId, publishedRecordId,
+					publishedSignature, result.requestToken,
+					Date.now() + this._refreshTimeoutMs);
+			})
+			.fail(() => {
+				this._setBusy(false);
+				this._setVerificationState('failed',
+					this._t('verify_status_request_failed'),
+					{ subjectId: subjectId, recordId: publishedRecordId });
+				this._setBanner('warning', this._t('verify_status_request_failed'));
+			});
+	}
+
+	_pollForVerificationSnapshot(subjectId, publishedRecordId,
+			publishedSignature, requestToken, deadline) {
+		if (subjectId !== this._selectedSubject ||
+				this._verificationState.requestToken !== requestToken) {
+			return;
+		}
+		const filter = {
+			'$and': [
+				{ source: DetoxTaskConfigurationSource.APP },
+				{ requestToken: requestToken }
+			]
+		};
+		this._client.getProjectLastRecordWithFilter(this._project, this._table,
+				subjectId, filter)
+			.done((response) => {
+				const record = response ? response.value : null;
+				if (record) {
+					this._finishVerification(record, subjectId, publishedRecordId,
+						publishedSignature, requestToken);
+					return;
+				}
+				if (Date.now() >= deadline) {
+					this._setBusy(false);
+					this._setVerificationState('timeout',
+						this._t('verify_status_timeout'),
+						{
+							subjectId: subjectId,
+							recordId: publishedRecordId,
+							requestToken: requestToken
+						});
+					this._setBanner('warning', this._t('verify_status_timeout'));
+					return;
+				}
+				window.setTimeout(() => {
+					this._pollForVerificationSnapshot(subjectId, publishedRecordId,
+						publishedSignature, requestToken, deadline);
+				}, this._pollIntervalMs);
+			})
+			.fail(() => {
+				this._setBusy(false);
+				this._setVerificationState('failed',
+					this._t('verify_status_check_failed'),
+					{
+						subjectId: subjectId,
+						recordId: publishedRecordId,
+						requestToken: requestToken
+					});
+				this._setBanner('warning', this._t('verify_status_check_failed'));
+			});
+	}
+
+	_finishVerification(record, subjectId, publishedRecordId,
+			publishedSignature, requestToken) {
+		let appSignature;
+		try {
+			appSignature = this._taskSetSignatureFromXml(record.xml);
+		} catch (error) {
+			this._setBusy(false);
+			this._setVerificationState('failed',
+				this._t('verify_status_parse_failed',
+					{ message: error.message }),
+				{
+					subjectId: subjectId,
+					recordId: publishedRecordId,
+					requestToken: requestToken
+				});
+			this._setBanner('warning',
+				this._t('verify_status_parse_failed',
+					{ message: error.message }));
+			return;
+		}
+
+		this._setBusy(false);
+		if (appSignature === publishedSignature) {
+			this._clearBanner();
+			this._setVerificationState('verified',
+				this._t('verify_status_verified'),
+				{
+					subjectId: subjectId,
+					recordId: publishedRecordId,
+					requestToken: requestToken
+				});
+			return;
+		}
+		this._setVerificationState('mismatch',
+			this._t('verify_status_mismatch'),
+			{
+				subjectId: subjectId,
+				recordId: publishedRecordId,
+				requestToken: requestToken
+			});
+		this._setBanner('warning', this._t('verify_status_mismatch'));
+	}
+
+	_taskSetSignatureFromXml(xml) {
+		const tasks = this._parseTaskXml(xml);
+		const normalized = tasks.map((task) => ({
+			id: String(task.id || ''),
+			name: task.name || '',
+			requestText: task.requestText || '',
+			description: task.description || '',
+			fixedTime: task.fixedTime || '',
+			stateTimeRangeStart: task.stateTimeRangeStart || '',
+			stateTimeRangeEnd: task.stateTimeRangeEnd || '',
+			requiredState: task.requiredState || '',
+			answerableOnWatch: !!task.answerableOnWatch,
+			maximumRequestsPerDay: task.maximumRequestsPerDay || '',
+			minimumIntervalRequestInMinutes:
+				task.minimumIntervalRequestInMinutes || '',
+			triggerType: this._normalizeTriggerType(task.triggerType) || '',
+			digitalGuideDialogueId: task.digitalGuideDialogueId || '',
+			extraFields: (task.extraFields || [])
+				.map((field) => ({
+					name: field && field.name ? field.name : '',
+					value: field && field.value ? field.value : ''
+				}))
+				.sort((a, b) => {
+					const aKey = a.name + '\u0000' + a.value;
+					const bKey = b.name + '\u0000' + b.value;
+					return aKey.localeCompare(bKey);
+				})
+		}));
+		return JSON.stringify(normalized);
 	}
 
 	_normalizeTriggerType(value) {
