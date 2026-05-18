@@ -51,6 +51,10 @@
 	margin-top: 16px;
 }
 
+.remote-task-verify-card {
+	margin-top: 14px;
+}
+
 .remote-task-publish-layout {
 	display: flex;
 	align-items: center;
@@ -215,6 +219,25 @@
 	color: #40506c;
 	font-size: 14px;
 	line-height: 1.6;
+}
+
+.remote-task-verification-status {
+	margin-top: 12px;
+	font-size: 14px;
+	line-height: 1.6;
+	color: #40506c;
+}
+
+.remote-task-verification-status.is-success {
+	color: #22663a;
+}
+
+.remote-task-verification-status.is-warning {
+	color: #8b5d0e;
+}
+
+.remote-task-verification-status.is-error {
+	color: #9b2437;
 }
 
 #remote-task-banner {
