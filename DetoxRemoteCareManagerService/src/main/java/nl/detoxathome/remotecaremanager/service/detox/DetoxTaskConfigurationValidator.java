@@ -16,7 +16,13 @@ import org.xml.sax.InputSource;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -76,7 +82,7 @@ public class DetoxTaskConfigurationValidator {
 			throw new TaskValidationException("xml",
 					"Task snapshot XML must be a non-empty string");
 		}
-		validateTaskXml(xml);
+		record.setXml(validateTaskXml(xml));
 		if (DetoxTaskConfiguration.SOURCE_APP.equals(normalizedSource)) {
 			validateAppSnapshot(record, actor, subject);
 		} else {
@@ -135,7 +141,7 @@ public class DetoxTaskConfigurationValidator {
 		return normalized;
 	}
 
-	private static void validateTaskXml(String xml)
+	private static String validateTaskXml(String xml)
 			throws TaskValidationException {
 		Document document = parseXml(xml);
 		Element root = document.getDocumentElement();
@@ -143,14 +149,18 @@ public class DetoxTaskConfigurationValidator {
 			throw new TaskValidationException("xml",
 					"Task XML root element must be ArrayList");
 		}
+		boolean changed = false;
 		List<Element> taskElements = childElements(root);
 		for (Element child : taskElements) {
 			if (!"Task".equals(child.getTagName())) {
 				throw new TaskValidationException("xml",
 						"ArrayList may only contain Task elements");
 			}
-			validateTaskElement(child);
+			changed |= validateTaskElement(child);
 		}
+		if (!changed)
+			return xml;
+		return serializeXml(document);
 	}
 
 	private static Document parseXml(String xml) throws TaskValidationException {
@@ -176,13 +186,34 @@ public class DetoxTaskConfigurationValidator {
 		}
 	}
 
-	private static void validateTaskElement(Element task)
+	private static String serializeXml(Document document)
+			throws TaskValidationException {
+		try {
+			TransformerFactory factory = TransformerFactory.newInstance();
+			factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			Transformer transformer = factory.newTransformer();
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+			transformer.setOutputProperty(OutputKeys.INDENT, "no");
+			StringWriter writer = new StringWriter();
+			transformer.transform(new DOMSource(document),
+					new StreamResult(writer));
+			return writer.toString();
+		} catch (Exception ex) {
+			throw new TaskValidationException("xml",
+					"Task snapshot XML could not be normalized: " + ex.getMessage());
+		}
+	}
+
+	private static boolean validateTaskElement(Element task)
 			throws TaskValidationException {
 		Map<String,String> values = new LinkedHashMap<>();
+		Map<String,Element> elements = new LinkedHashMap<>();
 		for (Element field : childElements(task)) {
 			String name = field.getTagName();
-			if (!values.containsKey(name))
+			if (!values.containsKey(name)) {
 				values.put(name, field.getTextContent());
+				elements.put(name, field);
+			}
 		}
 		for (String requiredField : REQUIRED_TASK_FIELDS) {
 			String value = values.get(requiredField);
@@ -198,7 +229,7 @@ public class DetoxTaskConfigurationValidator {
 		validateBooleanField(values, "answerableOnWatch");
 		validateIntField(values, "maximumRequestsPerDay", true);
 		validateIntField(values, "minimumIntervalRequestInMinutes", true);
-		validateTriggerField(values);
+		return validateTriggerField(values, elements);
 	}
 
 	private static void validateTimeField(Map<String,String> values,
@@ -243,21 +274,68 @@ public class DetoxTaskConfigurationValidator {
 		}
 	}
 
-	private static void validateTriggerField(Map<String,String> values)
+	private static boolean validateTriggerField(Map<String,String> values,
+			Map<String,Element> elements)
 			throws TaskValidationException {
-		String value = normalizeNullable(values.get("TaskTriggerType"));
+		String normalizedTrigger = null;
+		for (String fieldName : List.of("TaskTriggerType",
+				"combinedModePreferredTrigger")) {
+			String value = normalizeNullable(values.get(fieldName));
+			if (value == null)
+				continue;
+			String normalizedValue = normalizeTriggerType(value);
+			if (normalizedValue == null) {
+				throw new TaskValidationException("xml",
+						"Task trigger type must be FixedTime, CurrentState or CombinedMode");
+			}
+			if (normalizedTrigger == null) {
+				normalizedTrigger = normalizedValue;
+			} else if (!normalizedTrigger.equals(normalizedValue)) {
+				throw new TaskValidationException("xml",
+						"Task trigger fields must agree on a single trigger type");
+			}
+		}
+		if (normalizedTrigger == null)
+			return false;
+		boolean changed = false;
+		for (String fieldName : List.of("TaskTriggerType",
+				"combinedModePreferredTrigger")) {
+			Element field = elements.get(fieldName);
+			if (field == null)
+				continue;
+			String value = normalizeNullable(field.getTextContent());
+			if (value == null)
+				continue;
+			if (!normalizedTrigger.equals(value)) {
+				field.setTextContent(normalizedTrigger);
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
+	private static String normalizeTriggerType(String value) {
 		if (value == null)
-			value = normalizeNullable(values.get("combinedModePreferredTrigger"));
-		if (value == null)
-			return;
-		switch (value) {
-		case "FixedTime":
-		case "CurrentState":
-		case "CombinedMode":
-			return;
+			return null;
+		String normalized = value.trim();
+		if (normalized.isEmpty())
+			return null;
+		String key = normalized.toUpperCase(Locale.ROOT)
+				.replace('-', '_');
+		switch (key) {
+		case "FIXEDTIME":
+		case "FIXED_TIME":
+			return "FixedTime";
+		case "CURRENTSTATE":
+		case "CURRENT_STATE":
+		case "STATEBASED":
+		case "STATE_BASED":
+			return "CurrentState";
+		case "COMBINEDMODE":
+		case "COMBINED_MODE":
+			return "CombinedMode";
 		default:
-			throw new TaskValidationException("xml",
-					"Task trigger type must be FixedTime, CurrentState or CombinedMode");
+			return null;
 		}
 	}
 
