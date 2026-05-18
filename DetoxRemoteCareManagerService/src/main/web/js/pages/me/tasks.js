@@ -481,7 +481,8 @@ class RemoteTaskEditorPage {
 		this._requestText.val(task.requestText || '');
 		this._description.val(task.description || '');
 		this._dialogueId.val(task.digitalGuideDialogueId || '');
-		this._triggerType.val(task.triggerType || 'FIXED_TIME');
+		this._triggerType.val(
+			this._normalizeTriggerType(task.triggerType) || 'FixedTime');
 		this._fixedTime.val(task.fixedTime || '');
 		this._stateStart.val(task.stateTimeRangeStart || '');
 		this._stateEnd.val(task.stateTimeRangeEnd || '');
@@ -501,7 +502,7 @@ class RemoteTaskEditorPage {
 		task.requestText = this._requestText.val().trim();
 		task.description = this._description.val().trim();
 		task.digitalGuideDialogueId = this._dialogueId.val().trim();
-		task.triggerType = this._triggerType.val();
+		task.triggerType = this._normalizeTriggerType(this._triggerType.val());
 		task.fixedTime = this._normalizeTimeInput(this._fixedTime.val());
 		task.stateTimeRangeStart =
 			this._normalizeTimeInput(this._stateStart.val());
@@ -890,7 +891,7 @@ class RemoteTaskEditorPage {
 			answerableOnWatch: false,
 			maximumRequestsPerDay: '',
 			minimumIntervalRequestInMinutes: '',
-			triggerType: 'FIXED_TIME',
+			triggerType: 'FixedTime',
 			triggerFieldNames: ['combinedModePreferredTrigger'],
 			digitalGuideDialogueId: '',
 			extraFields: []
@@ -963,7 +964,8 @@ class RemoteTaskEditorPage {
 					break;
 				case 'combinedModePreferredTrigger':
 				case 'TaskTriggerType':
-					task.triggerType = value.trim() || 'FIXED_TIME';
+					task.triggerType =
+						this._normalizeTriggerType(value.trim()) || 'FixedTime';
 					task.triggerFieldNames.push(child.tagName);
 					break;
 				case 'digitalGuideDialogueId':
@@ -1015,7 +1017,7 @@ class RemoteTaskEditorPage {
 				task.triggerFieldNames : ['combinedModePreferredTrigger'];
 			for (let triggerFieldName of triggerFields) {
 				this._appendXmlField(doc, taskElement, triggerFieldName,
-					task.triggerType || 'FIXED_TIME');
+					this._normalizeTriggerType(task.triggerType) || 'FixedTime');
 			}
 			this._appendOptionalXmlField(doc, taskElement,
 				'digitalGuideDialogueId', task.digitalGuideDialogueId);
@@ -1032,6 +1034,30 @@ class RemoteTaskEditorPage {
 			doc.documentElement.appendChild(taskElement);
 		}
 		return new XMLSerializer().serializeToString(doc);
+	}
+
+	_normalizeTriggerType(value) {
+		if (value === null || value === undefined)
+			return null;
+		let normalized = (value + '').trim();
+		if (!normalized)
+			return null;
+		let key = normalized.toUpperCase().replace(/-/g, '_');
+		switch (key) {
+		case 'FIXEDTIME':
+		case 'FIXED_TIME':
+			return 'FixedTime';
+		case 'CURRENTSTATE':
+		case 'CURRENT_STATE':
+		case 'STATEBASED':
+		case 'STATE_BASED':
+			return 'CurrentState';
+		case 'COMBINEDMODE':
+		case 'COMBINED_MODE':
+			return 'CombinedMode';
+		default:
+			return normalized;
+		}
 	}
 
 	_appendXmlField(doc, parent, name, value) {
