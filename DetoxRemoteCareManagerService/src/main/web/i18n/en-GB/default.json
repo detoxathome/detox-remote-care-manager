@@ -78,6 +78,7 @@
 	"remote_task_editor_field_trigger_type": "Preferred trigger",
 	"remote_task_editor_trigger_fixed_time": "Fixed time",
 	"remote_task_editor_trigger_state_based": "State based",
+	"remote_task_editor_trigger_combined_mode": "Combined mode",
 	"remote_task_editor_field_fixed_time": "Fixed time",
 	"remote_task_editor_field_state_start": "State from",
 	"remote_task_editor_field_state_end": "State until",

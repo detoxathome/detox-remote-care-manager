@@ -78,6 +78,7 @@
 	"remote_task_editor_field_trigger_type": "Voorkeurstrigger",
 	"remote_task_editor_trigger_fixed_time": "Vaste tijd",
 	"remote_task_editor_trigger_state_based": "Toestand",
+	"remote_task_editor_trigger_combined_mode": "Gecombineerd",
 	"remote_task_editor_field_fixed_time": "Vaste tijd",
 	"remote_task_editor_field_state_start": "Toestand vanaf",
 	"remote_task_editor_field_state_end": "Toestand tot",
