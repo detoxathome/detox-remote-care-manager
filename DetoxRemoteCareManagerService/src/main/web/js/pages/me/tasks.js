@@ -700,10 +700,7 @@ class RemoteTaskEditorPage {
 				if (generation !== this._watchGeneration)
 					return;
 				if (Array.isArray(subjects) && subjects.length > 0) {
-					this._stale = true;
-					this._updateStatusText(null);
-					this._updateStepState();
-					this._setBanner('warning', this._t('warning_watch_update'));
+					this._handleWatchedSnapshotChange(subjectId, generation);
 				}
 				this._watchLoop(subjectId, registrationId, generation);
 			})
@@ -714,6 +711,38 @@ class RemoteTaskEditorPage {
 					this._watchLoop(subjectId, registrationId, generation);
 				}, 3000);
 			});
+	}
+
+	_handleWatchedSnapshotChange(subjectId, generation) {
+		this._client.getProjectLastRecord(this._project, this._table, subjectId)
+			.done((response) => {
+				if (generation !== this._watchGeneration ||
+						subjectId !== this._selectedSubject)
+					return;
+				const latestRecord = response ? response.value : null;
+				const latestRecordId = latestRecord ? latestRecord.id : null;
+				const previousLatestRecordId = this._latestRecordId;
+				this._latestRecordId = latestRecordId;
+				if (!this._editorLoaded || !latestRecordId ||
+						latestRecordId === previousLatestRecordId ||
+						latestRecordId === this._baseRecordId ||
+						this._isExpectedVerificationEcho(latestRecord)) {
+					return;
+				}
+				this._stale = true;
+				this._updateStatusText(null);
+				this._updateStepState();
+				this._setBanner('warning', this._t('warning_watch_update'));
+			});
+	}
+
+	_isExpectedVerificationEcho(record) {
+		if (!record)
+			return false;
+		const verificationRequestToken = this._verificationState.requestToken;
+		return record.source === DetoxTaskConfigurationSource.APP &&
+			!!verificationRequestToken &&
+			record.requestToken === verificationRequestToken;
 	}
 
 	_stopWatching() {
