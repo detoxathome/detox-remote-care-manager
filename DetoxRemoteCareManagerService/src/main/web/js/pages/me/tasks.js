@@ -6,6 +6,7 @@ class RemoteTaskEditorPage {
 		this._refreshTimeoutMs = 20000;
 		this._pollIntervalMs = 2000;
 		this._verificationGraceMs = 5000;
+		this._customDialogueOptionValue = '__custom__';
 		this._user = null;
 		this._subjects = [];
 		this._subjectMap = {};
@@ -46,6 +47,7 @@ class RemoteTaskEditorPage {
 		this._requestText = $('#remote-task-request-text');
 		this._description = $('#remote-task-description');
 		this._dialogueId = $('#remote-task-dialogue-id');
+		this._dialogueIdCustom = $('#remote-task-dialogue-id-custom');
 		this._triggerType = $('#remote-task-trigger-type');
 		this._fixedTime = $('#remote-task-fixed-time');
 		this._stateStart = $('#remote-task-state-start');
@@ -81,6 +83,7 @@ class RemoteTaskEditorPage {
 		menuController.selectMenuItem('me-tasks');
 		$(document.body).addClass('tinted-background');
 		$('#content').css('visibility', 'visible');
+		this._populateDialogueOptions();
 
 		this._subjectSelect.on('change', () => this._onSubjectChanged());
 		$('#remote-task-refresh-app').on('click', () => this._reloadFromApp());
@@ -93,12 +96,13 @@ class RemoteTaskEditorPage {
 		$('#remote-task-delete').on('click', () => this._deleteTask());
 		$('#remote-task-move-up').on('click', () => this._moveTask(-1));
 		$('#remote-task-move-down').on('click', () => this._moveTask(1));
+		this._dialogueId.on('change', () => this._onDialogueSelectionChanged());
 
 		[
 			this._name,
 			this._requestText,
 			this._description,
-			this._dialogueId,
+			this._dialogueIdCustom,
 			this._triggerType,
 			this._fixedTime,
 			this._stateStart,
@@ -488,7 +492,7 @@ class RemoteTaskEditorPage {
 		this._name.val(task.name || '');
 		this._requestText.val(task.requestText || '');
 		this._description.val(task.description || '');
-		this._dialogueId.val(task.digitalGuideDialogueId || '');
+		this._setDialogueValue(task.digitalGuideDialogueId || '');
 		this._triggerType.val(
 			this._normalizeTriggerType(task.triggerType) || 'FixedTime');
 		this._fixedTime.val(task.fixedTime || '');
@@ -509,7 +513,7 @@ class RemoteTaskEditorPage {
 		task.name = this._name.val().trim();
 		task.requestText = this._requestText.val().trim();
 		task.description = this._description.val().trim();
-		task.digitalGuideDialogueId = this._dialogueId.val().trim();
+		task.digitalGuideDialogueId = this._getDialogueValue();
 		task.triggerType = this._normalizeTriggerType(this._triggerType.val());
 		task.fixedTime = this._normalizeTimeInput(this._fixedTime.val());
 		task.stateTimeRangeStart =
@@ -525,6 +529,65 @@ class RemoteTaskEditorPage {
 		this._markDirty();
 		this._renderTaskList();
 		this._renderDetail();
+	}
+
+	_onDialogueSelectionChanged() {
+		this._toggleDialogueCustomInput();
+		this._onDetailChanged();
+	}
+
+	_populateDialogueOptions() {
+		this._dialogueId.empty();
+		this._dialogueId.append($('<option></option>')
+			.attr('value', '')
+			.text(this._t('dialogue_none')));
+		for (let dialogue of RemoteTaskDefaultDialogues) {
+			this._dialogueId.append($('<option></option>')
+				.attr('value', dialogue.id)
+				.text(this._dialogueLabel(dialogue)));
+		}
+		this._dialogueId.append($('<option></option>')
+			.attr('value', this._customDialogueOptionValue)
+			.text(this._t('dialogue_custom')));
+		this._dialogueIdCustom.attr('placeholder',
+			this._t('dialogue_custom_placeholder'));
+		this._toggleDialogueCustomInput();
+	}
+
+	_dialogueLabel(dialogue) {
+		return this._t(dialogue.labelKey) + ' (' + dialogue.id + ')';
+	}
+
+	_setDialogueValue(value) {
+		let dialogueId = (value || '').trim();
+		if (!dialogueId) {
+			this._dialogueId.val('');
+			this._dialogueIdCustom.val('');
+			this._toggleDialogueCustomInput();
+			return;
+		}
+		let defaultDialogue = RemoteTaskDefaultDialogues.find(
+			(dialogue) => dialogue.id === dialogueId);
+		if (defaultDialogue) {
+			this._dialogueId.val(dialogueId);
+			this._dialogueIdCustom.val('');
+		} else {
+			this._dialogueId.val(this._customDialogueOptionValue);
+			this._dialogueIdCustom.val(dialogueId);
+		}
+		this._toggleDialogueCustomInput();
+	}
+
+	_getDialogueValue() {
+		let selected = (this._dialogueId.val() || '').trim();
+		if (selected === this._customDialogueOptionValue)
+			return this._dialogueIdCustom.val().trim();
+		return selected;
+	}
+
+	_toggleDialogueCustomInput() {
+		let useCustom = this._dialogueId.val() === this._customDialogueOptionValue;
+		this._dialogueIdCustom.toggle(useCustom);
 	}
 
 	_addTask() {
@@ -1466,5 +1529,26 @@ const DetoxTaskConfigurationSource = {
 	APP: 'APP',
 	WEB: 'WEB'
 };
+
+const RemoteTaskDefaultDialogues = [
+	{ id: 'bac', labelKey: 'dialogue_bac' },
+	{ id: 'blood_pressure', labelKey: 'dialogue_blood_pressure' },
+	{ id: 'craving_vas', labelKey: 'dialogue_craving_vas' },
+	{ id: 'demo_links', labelKey: 'dialogue_demo_links' },
+	{
+		id: 'deviation_assessment_questions',
+		labelKey: 'dialogue_deviation_assessment_questions'
+	},
+	{ id: 'morning_start', labelKey: 'dialogue_morning_start' },
+	{ id: 'questionnaire_dass21', labelKey: 'dialogue_questionnaire_dass21' },
+	{ id: 'questionnaire_sos', labelKey: 'dialogue_questionnaire_sos' },
+	{ id: 'saturation', labelKey: 'dialogue_saturation' },
+	{ id: 'starter_contact', labelKey: 'dialogue_starter_contact' },
+	{
+		id: 'starter_unavailable',
+		labelKey: 'dialogue_starter_unavailable'
+	},
+	{ id: 'temperature', labelKey: 'dialogue_temperature' }
+];
 
 new RemoteTaskEditorPage();
