@@ -1655,7 +1655,6 @@ public class ProjectControllerExecution {
 		CommonCrudController.validateWriteRecordTime(defaultTz, result, map);
 		validateDetoxTaskWriteRecord(table, result, user, subject);
 		validateDetoxDialogueCapabilityWriteRecord(table, result, user, subject);
-		CommonCrudController.validateWriteRecordTime(defaultTz, result, map);
 		return result;
 	}
 
