@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import nl.detoxathome.remotecaremanager.client.model.NullableResponse;
 import nl.detoxathome.remotecaremanager.client.model.TableSpec;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxDigitalGuideDialogueOptions;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxLinkedSubjectSummary;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestResult;
 import nl.detoxathome.remotecaremanager.dao.DatabaseObject;
@@ -211,6 +212,25 @@ public class ProjectController {
 		return QueryRunner.runProjectQuery(
 				(version, authDb, projectDb, user, baseProject) ->
 				exec.createDetoxTaskRefreshRequest(version, authDb, projectDb,
+						user, baseProject, subject),
+				versionName, project, request, response);
+	}
+
+	@RequestMapping(value="/{project}/detox-subject/{subject}/digital-guide-dialogues",
+			method=RequestMethod.GET)
+	public DetoxDigitalGuideDialogueOptions getDetoxDigitalGuideDialogues(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@PathVariable("version")
+			@Parameter(hidden = true)
+			String versionName,
+			@PathVariable("project")
+			String project,
+			@PathVariable("subject")
+			final String subject) throws HttpException, Exception {
+		return QueryRunner.runProjectQuery(
+				(version, authDb, projectDb, user, baseProject) ->
+				exec.getDetoxDigitalGuideDialogues(version, authDb, projectDb,
 						user, baseProject, subject),
 				versionName, project, request, response);
 	}
