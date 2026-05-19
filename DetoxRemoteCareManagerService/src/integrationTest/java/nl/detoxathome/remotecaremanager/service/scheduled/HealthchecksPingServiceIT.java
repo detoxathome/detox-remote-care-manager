@@ -67,6 +67,31 @@ public class HealthchecksPingServiceIT {
 	}
 
 	@Test
+	void statusReportsConfiguredScheduleInterval() {
+		TestConfiguration config = new TestConfiguration();
+		config.set(Configuration.HEALTHCHECKS_GENERAL_PING_INTERVAL_MS,
+				"60000");
+		HealthchecksPingService service = newService(config, new ArrayList<>());
+
+		HealthchecksPingService.Status status = service.getStatus();
+
+		assertEquals(60000, status.scheduleDelayMs());
+	}
+
+	@Test
+	void invalidScheduleIntervalFallsBackToDefault() {
+		TestConfiguration config = new TestConfiguration();
+		config.set(Configuration.HEALTHCHECKS_GENERAL_PING_INTERVAL_MS,
+				"invalid");
+		HealthchecksPingService service = newService(config, new ArrayList<>());
+
+		HealthchecksPingService.Status status = service.getStatus();
+
+		assertEquals(HealthchecksPingService.DEFAULT_SCHEDULE_DELAY_MS,
+				status.scheduleDelayMs());
+	}
+
+	@Test
 	void retriesAfterRequestFailure() throws Exception {
 		MockWebServer server = new MockWebServer();
 		server.enqueue(new MockResponse()

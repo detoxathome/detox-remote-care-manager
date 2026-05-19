@@ -3,6 +3,7 @@ package nl.detoxathome.remotecaremanager.service.scheduled;
 import nl.detoxathome.remotecaremanager.service.Configuration;
 import nl.rrd.utils.AppComponents;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +26,7 @@ public class HealthchecksPingService {
 
 	private static final String LOGTAG =
 			HealthchecksPingService.class.getSimpleName();
-	private static final long SCHEDULE_DELAY_MS = 30 * 60 * 1000;
+	public static final long DEFAULT_SCHEDULE_DELAY_MS = 30 * 60 * 1000;
 	private static final int MAX_RETRIES = 5;
 	private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 	private static final long[] RETRY_DELAYS_MS = {
@@ -36,6 +37,7 @@ public class HealthchecksPingService {
 	private final HttpClient httpClient;
 	private final Sleeper sleeper;
 	private final Logger logger;
+	private final long scheduleDelayMs;
 	private final Object statusLock = new Object();
 
 	private boolean lastEnabled = true;
@@ -47,23 +49,34 @@ public class HealthchecksPingService {
 	private ZonedDateTime lastFailureTime = null;
 	private Integer lastStatusCode = null;
 
-	public HealthchecksPingService() {
+	@Autowired
+	public HealthchecksPingService(
+			HealthchecksPingIntervalConfig intervalConfig) {
 		this(AppComponents.get(Configuration.class),
 				HttpClient.newBuilder()
 						.connectTimeout(REQUEST_TIMEOUT)
 						.build(),
-				Thread::sleep);
+				Thread::sleep,
+				intervalConfig.getIntervalMs());
 	}
 
 	HealthchecksPingService(Configuration config, HttpClient httpClient,
 			Sleeper sleeper) {
+		this(config, httpClient, sleeper, resolveScheduleDelayMs(config,
+				AppComponents.getLogger(LOGTAG)));
+	}
+
+	private HealthchecksPingService(Configuration config, HttpClient httpClient,
+			Sleeper sleeper, long scheduleDelayMs) {
 		this.config = config;
 		this.httpClient = httpClient;
 		this.sleeper = sleeper;
 		this.logger = AppComponents.getLogger(LOGTAG);
+		this.scheduleDelayMs = scheduleDelayMs;
 	}
 
-	@Scheduled(fixedDelay=SCHEDULE_DELAY_MS)
+	@Scheduled(fixedDelayString=
+			"#{@healthchecksPingIntervalConfig.intervalMs}")
 	public void runTask() {
 		try {
 			runPing();
@@ -84,7 +97,7 @@ public class HealthchecksPingService {
 					lastSuccessTime,
 					lastFailureTime,
 					lastStatusCode,
-					SCHEDULE_DELAY_MS,
+					scheduleDelayMs,
 					REQUEST_TIMEOUT.toMillis(),
 					MAX_RETRIES,
 					Arrays.stream(RETRY_DELAYS_MS).boxed().toList()
@@ -151,6 +164,25 @@ public class HealthchecksPingService {
 		return environment.equals("production") ||
 				environment.equals("prod") ||
 				environment.equals("utwente");
+	}
+
+	static long resolveScheduleDelayMs(Configuration config, Logger logger) {
+		String configuredInterval = config.get(
+				Configuration.HEALTHCHECKS_GENERAL_PING_INTERVAL_MS);
+		if (configuredInterval == null || configuredInterval.isBlank())
+			return DEFAULT_SCHEDULE_DELAY_MS;
+		try {
+			long intervalMs = Long.parseLong(configuredInterval.trim());
+			if (intervalMs > 0)
+				return intervalMs;
+		} catch (NumberFormatException ex) {
+			logger.warn("Invalid Healthchecks ping interval: " +
+					configuredInterval);
+			return DEFAULT_SCHEDULE_DELAY_MS;
+		}
+		logger.warn("Healthchecks ping interval must be positive: " +
+				configuredInterval);
+		return DEFAULT_SCHEDULE_DELAY_MS;
 	}
 
 	private boolean sendPing(HttpRequest request, int attempt)

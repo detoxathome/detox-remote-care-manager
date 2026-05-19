@@ -79,6 +79,8 @@ public class Configuration extends BaseConfiguration {
 			"healthchecksGeneralPingUrl";
 	public static final String HEALTHCHECKS_GENERAL_PING_ENABLED =
 			"healthchecksGeneralPingEnabled";
+	public static final String HEALTHCHECKS_GENERAL_PING_INTERVAL_MS =
+			"healthchecksGeneralPingIntervalMs";
 
 	@Override
 	public String getBaseUrl() {
