@@ -170,9 +170,8 @@ public class HealthchecksPingServiceIT {
 	}
 
 	@Test
-	void productionAndUtwenteEnvironmentsEnablePingByDefault()
-			throws Exception {
-		for (String environment : List.of("production", "prod", "utwente")) {
+	void productionEnvironmentsEnablePingByDefault() throws Exception {
+		for (String environment : List.of("production", "prod")) {
 			MockWebServer server = new MockWebServer();
 			server.enqueue(new MockResponse().setResponseCode(200));
 			server.start();
@@ -197,7 +196,8 @@ public class HealthchecksPingServiceIT {
 	@Test
 	void nonProductionEnvironmentsDisablePingByDefault() throws Exception {
 		List<String> environments = new ArrayList<>(
-				List.of("local", "dev", "development", "custom", ""));
+				List.of("local", "dev", "development", "custom", "utwente",
+						""));
 		environments.add(null);
 		for (String environment : environments) {
 			MockWebServer server = new MockWebServer();
