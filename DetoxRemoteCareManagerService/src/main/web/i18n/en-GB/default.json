@@ -142,6 +142,7 @@
 	"remote_task_editor_verify_status_waiting_for_publish": "Publish a web task snapshot before verifying delivery on the patient app.",
 	"remote_task_editor_verify_status_publish_or_reload": "Publish or reload the current task set before running verification.",
 	"remote_task_editor_verify_status_ready": "Ready to verify the latest published web snapshot on the linked patient app.",
+	"remote_task_editor_verify_status_settle": "Waiting briefly so the patient app can apply the published task update before verification starts.",
 	"remote_task_editor_verify_status_request": "Creating a verification request for the patient app...",
 	"remote_task_editor_verify_status_request_no_push": "No push registration is known for this patient. Verification will wait briefly for a pull-based refresh before timing out.",
 	"remote_task_editor_verify_status_waiting": "Waiting for the patient app to return its current task set...",

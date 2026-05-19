@@ -142,6 +142,7 @@
 	"remote_task_editor_verify_status_waiting_for_publish": "Publiceer eerst een webtaaksnapshot voordat u levering op de patiënt-app controleert.",
 	"remote_task_editor_verify_status_publish_or_reload": "Publiceer of laad de huidige taakset opnieuw voordat u de controle uitvoert.",
 	"remote_task_editor_verify_status_ready": "Klaar om de nieuwste gepubliceerde websnapshot op de gekoppelde patiënt-app te controleren.",
+	"remote_task_editor_verify_status_settle": "Kort wachten zodat de patiënt-app de gepubliceerde taakupdate kan toepassen voordat de controle start.",
 	"remote_task_editor_verify_status_request": "Een controlevraag voor de patiënt-app aanmaken...",
 	"remote_task_editor_verify_status_request_no_push": "Er is geen pushregistratie bekend voor deze patiënt. De controle wacht kort op een pull-refresh voordat deze een time-out krijgt.",
 	"remote_task_editor_verify_status_waiting": "Wachten tot de patiënt-app de huidige taakset terugstuurt...",
