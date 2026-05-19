@@ -53,6 +53,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,28 +69,30 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 			DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
 	private static final Map<String,CodedOption> AFWIJKING_OPENINGSVRAAG_OPTIONS =
 			createCodedOptions(
-					new CodedOption("at3", "ac2", "Het gaat niet goed met mij"),
-					new CodedOption("at4", "ac2", "Het gaat goed met mij"));
+					new CodedOption("at3", "ac2", "Hetgaatnietgoedmetmij"),
+					new CodedOption("at4", "ac2", "Hetgaatgoedmetmij"));
 	private static final Map<String,CodedOption> AFWIJKING_GEBRUIK_OPTIONS =
 			createCodedOptions(
-					new CodedOption("at15", "ac14", "Ja, ik heb gebruikt"),
+					new CodedOption("at15", "ac14", "Ja,ikhebgebruikt"),
 					new CodedOption("at16", "ac14",
-							"Ja, ik ben van plan te gebruiken"),
+							"Ja,ikbenvanplantegebruiken"),
 					new CodedOption("at17", "ac14",
-							"Nee, ik heb niet gebruikt en geen plannen om te gaan gebruiken"));
+							"Nee,ikhebnietgebruiktengeenplannenomtegaangebruiken"));
 	private static final Map<String,CodedOption> AFWIJKING_ALLEEN_OPTIONS =
 			createCodedOptions(
-					new CodedOption("at21", "ac20", "Ja, ik ben alleen"),
+					new CodedOption("at21", "ac20", "Ja,ikbenalleen"),
 					new CodedOption("at22", "ac20",
-							"Nee, ik ben met mensen die mij steunen"),
+							"Nee,ikbenmetmensendiemijsteunen"),
 					new CodedOption("at23", "ac20",
-							"Nee, ik ben samen met andere mensen"));
+							"Nee,ikbensamenmetanderemensen"));
 	private static final Map<String,CodedOption> AFWIJKING_HOE_SNEL_OPTIONS =
 			createCodedOptions(
-					new CodedOption("at27", "ac26", "Binnen een uur"),
-					new CodedOption("at28", "ac26", "Binnen een dagdeel"),
+					new CodedOption("at27", "ac26", "Binneneenuur"),
+					new CodedOption("at28", "ac26", "Binneneendagdeel"),
 					new CodedOption("at29", "ac26",
-							"Bij de volgende afspraak met mijn zorgverlener"));
+							"Bijdevolgendeafspraakmetmijnzorgverlener"));
+	private static final int[] DASS21_ITEM_IDS = new int[] {52, 12, 14, 16, 18,
+			20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50};
 
 	private final String project;
 	private final Object HTTP_CLIENT_LOCK = new Object();
@@ -221,35 +224,229 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 	private List<ProcessedPayload> buildProcessedPayloads(String type,
 			Map<String,Object> compact, String ssaId, int onsId,
 			String fallbackOnsTimestamp, ZoneId queueZone) {
+		Map<String,Object> normalizedCompact = normalizeIncomingPayload(compact,
+				type);
 		List<ProcessedPayload> result = new ArrayList<>();
 		if ("heartrate".equals(type)) {
 			result.add(new ProcessedPayload("heartrate",
-					buildHeartRatePayload(compact, onsId, fallbackOnsTimestamp,
+					buildHeartRatePayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp,
 							queueZone)));
 		} else if ("bloodpressure".equals(type)) {
 			result.add(new ProcessedPayload("bloodpressure",
-					buildBloodPressurePayload(compact, onsId, fallbackOnsTimestamp,
+					buildBloodPressurePayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp,
 							queueZone)));
-			if (compact.containsKey("pulseBpm")) {
-				double pulseBpm = requireNumber(compact, "pulseBpm");
-				Map<String,Object> heartRateCompact = new LinkedHashMap<>(compact);
+			if (normalizedCompact.containsKey("pulseBpm")) {
+				double pulseBpm = requireNumber(normalizedCompact, "pulseBpm");
+				Map<String,Object> heartRateCompact = new LinkedHashMap<>(
+						normalizedCompact);
 				heartRateCompact.put("value", pulseBpm);
 				result.add(new ProcessedPayload("heartrate",
 						buildHeartRatePayload(heartRateCompact, onsId,
 								fallbackOnsTimestamp, queueZone)));
 			}
+		} else if ("vas".equals(type)) {
+			result.add(new ProcessedPayload("vas",
+					buildVasPayload(normalizedCompact, onsId, fallbackOnsTimestamp,
+							queueZone)));
+		} else if ("sos".equals(type)) {
+			result.add(new ProcessedPayload("sos",
+					buildSosPayload(normalizedCompact, onsId, fallbackOnsTimestamp,
+							queueZone)));
+		} else if ("dass21".equals(type)) {
+			result.add(new ProcessedPayload("dass21",
+					buildDass21Payload(normalizedCompact, onsId,
+							fallbackOnsTimestamp, queueZone)));
+		} else if ("temperature".equals(type)) {
+			result.add(new ProcessedPayload("temperature",
+					buildTemperaturePayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp, queueZone)));
+		} else if ("saturation".equals(type)) {
+			result.add(new ProcessedPayload("saturation",
+					buildSaturationPayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp, queueZone)));
+		} else if ("bac".equals(type)) {
+			result.add(new ProcessedPayload("bac",
+					buildBacPayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp, queueZone)));
 		} else if ("detox_dagstart".equals(type)) {
 			result.add(new ProcessedPayload("detox_dagstart",
-					buildDetoxDagstartPayload(compact, onsId, fallbackOnsTimestamp,
+					buildDetoxDagstartPayload(normalizedCompact, onsId,
+							fallbackOnsTimestamp,
 							queueZone)));
 		} else if ("afwijkingsbeoordeling".equals(type)) {
 			result.add(new ProcessedPayload("afwijkingsbeoordeling",
-					buildAfwijkingsbeoordelingPayload(compact, onsId,
+					buildAfwijkingsbeoordelingPayload(normalizedCompact, onsId,
 							fallbackOnsTimestamp, queueZone)));
 		} else {
 			throw new IllegalArgumentException("Unsupported type: " + type);
 		}
 		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> normalizeIncomingPayload(Map<String,Object> compact,
+			String expectedType) {
+		if (compact == null)
+			return new LinkedHashMap<>();
+		if ("afwijkingsbeoordeling".equals(expectedType) &&
+				compact.get("values") instanceof Map<?,?> valuesMap) {
+			Map<String,Object> normalized = flattenAfwijkingsValues(valuesMap);
+			copyIfAbsent(normalized, "timestampUtcMillis", compact,
+					"timestampUtcMillis");
+			copyIfAbsent(normalized, "timeZone", compact, "timeZone");
+			copyIfAbsent(normalized, "localTime", compact, "localTime");
+			return normalized;
+		}
+		Map<String,Object> result = compact;
+		Map<String,Object> selectedValue = null;
+		if (compact.get("values") instanceof Map<?,?> valuesMap) {
+			selectedValue = selectWrappedPayloadValue(valuesMap, expectedType);
+			if (selectedValue != null &&
+					selectedValue.get("result") instanceof Map<?,?> resultMap) {
+				result = (Map<String,Object>)resultMap;
+			} else if (selectedValue != null) {
+				result = selectedValue;
+			}
+		} else if (compact.get("result") instanceof Map<?,?> resultMap) {
+			result = (Map<String,Object>)resultMap;
+		}
+		Map<String,Object> normalized = new LinkedHashMap<>(result);
+		copyIfAbsent(normalized, "timestampUtcMillis", compact, "timestampUtcMillis");
+		copyIfAbsent(normalized, "timeZone", compact, "timeZone");
+		copyIfAbsent(normalized, "localTime", compact, "localTime");
+		if (selectedValue != null) {
+			copyIfAbsent(normalized, "inputDefinitionId", selectedValue,
+					"inputDefinitionId");
+		}
+		return normalized;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> flattenAfwijkingsValues(Map<?,?> valuesMap) {
+		Map<String,Object> result = new LinkedHashMap<>();
+		List<Object> orderedValues = new ArrayList<>();
+		for (Map.Entry<?,?> entry : valuesMap.entrySet()) {
+			if (!(entry.getValue() instanceof Map<?,?> valueMap))
+				continue;
+			Map<String,Object> typedValue = (Map<String,Object>)valueMap;
+			Map<String,Object> response = typedValue;
+			if (typedValue.get("result") instanceof Map<?,?> resultMap)
+				response = (Map<String,Object>)resultMap;
+			Object extracted = extractResultValue(response);
+			if (extracted == null)
+				continue;
+			orderedValues.add(extracted);
+			String inputId = findOptionalString(response, "inputDefinitionId");
+			if (inputId == null || inputId.isBlank()) {
+				inputId = findOptionalString(typedValue, "inputDefinitionId");
+			}
+			if (inputId == null || inputId.isBlank()) {
+				inputId = entry.getKey() != null ? entry.getKey().toString() : null;
+			}
+			String normalizedInputId = normalizeOptionValue(inputId != null ?
+					inputId : "");
+			if ("deviationhowareyou".equals(normalizedInputId)) {
+				result.put("openingsvraag", extracted);
+			} else if ("deviationneedshelp".equals(normalizedInputId)) {
+				result.put("hebJeHulpNodig", extracted);
+			} else if ("deviationhelprequest".equals(normalizedInputId)) {
+				result.put("waarHebJeHulpBijNodig", extracted);
+			} else if ("deviationsubstanceuserisk".equals(normalizedInputId)) {
+				result.put("gebruik", extracted);
+			} else if ("deviationisalone".equals(normalizedInputId)) {
+				result.put("alleenOfNiet", extracted);
+			} else if ("deviationtrustedenvironment".equals(normalizedInputId)) {
+				result.put("vertrouwdeOmgeving", extracted);
+			} else if ("deviationhelpurgency".equals(normalizedInputId)) {
+				result.put("hoeSnelHulp", extracted);
+			}
+		}
+		String[] fallbackOrder = new String[] {"openingsvraag", "hebJeHulpNodig",
+				"waarHebJeHulpBijNodig", "gebruik", "alleenOfNiet",
+				"vertrouwdeOmgeving", "hoeSnelHulp"};
+		for (int i = 0; i < fallbackOrder.length && i < orderedValues.size(); i++) {
+			result.putIfAbsent(fallbackOrder[i], orderedValues.get(i));
+		}
+		return result;
+	}
+
+	private Object extractResultValue(Map<String,Object> resultMap) {
+		if (resultMap.containsKey("text"))
+			return resultMap.get("text");
+		if (resultMap.containsKey("value"))
+			return resultMap.get("value");
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> selectWrappedPayloadValue(Map<?,?> valuesMap,
+			String expectedType) {
+		Map<String,Object> firstMap = null;
+		for (Map.Entry<?,?> entry : valuesMap.entrySet()) {
+			if (!(entry.getValue() instanceof Map<?,?> valueMap))
+				continue;
+			Map<String,Object> candidate = (Map<String,Object>)valueMap;
+			if (firstMap == null)
+				firstMap = candidate;
+			Map<String,Object> candidateResult = candidate;
+			if (candidate.get("result") instanceof Map<?,?> resultMap)
+				candidateResult = (Map<String,Object>)resultMap;
+			String inferredType = inferTypeFromPayload(candidateResult,
+					entry.getKey() != null ? entry.getKey().toString() : null);
+			if (expectedType != null && expectedType.equals(inferredType))
+				return candidate;
+		}
+		return firstMap;
+	}
+
+	private void copyIfAbsent(Map<String,Object> target, String targetKey,
+			Map<String,Object> source, String sourceKey) {
+		if (target.containsKey(targetKey))
+			return;
+		if (!source.containsKey(sourceKey))
+			return;
+		target.put(targetKey, source.get(sourceKey));
+	}
+
+	private String inferTypeFromPayload(Map<String,Object> payload,
+			String fallbackInputDefinition) {
+		String directType = normalizeType(findOptionalString(payload, "type"));
+		if (directType != null)
+			return directType;
+		String inputDefinition = findOptionalString(payload, "inputDefinitionId");
+		if (inputDefinition == null || inputDefinition.isBlank())
+			inputDefinition = fallbackInputDefinition;
+		if (inputDefinition == null)
+			return directType;
+		String normalizedId = inputDefinition.toLowerCase()
+				.replaceAll("[_\\s\\-/]", "");
+		String payloadType = findOptionalString(payload, "type");
+		if ("questionnaire".equalsIgnoreCase(payloadType)) {
+			if (normalizedId.contains("sos"))
+				return "sos";
+			if (normalizedId.contains("dass21"))
+				return "dass21";
+		}
+		if (normalizedId.contains("bloodpressure"))
+			return "bloodpressure";
+		if (normalizedId.contains("heartrate"))
+			return "heartrate";
+		if (normalizedId.contains("dagstart"))
+			return "detox_dagstart";
+		if (normalizedId.contains("afwijking") || normalizedId.contains("deviation"))
+			return "afwijkingsbeoordeling";
+		if (normalizedId.contains("cravingvas") || normalizedId.equals("vas"))
+			return "vas";
+		if (normalizedId.contains("temperature"))
+			return "temperature";
+		if (normalizedId.contains("saturation") || normalizedId.contains("spo2"))
+			return "saturation";
+		if (normalizedId.contains("bac") ||
+				normalizedId.contains("bloodalcohol"))
+			return "bac";
+		return directType;
 	}
 
 	private String buildHeartRatePayload(Map<String,Object> compact, int onsId,
@@ -408,6 +605,175 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		return (int)Math.round(map);
 	}
 
+	private String buildVasPayload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		int value = (int)Math.round(requireNumber(compact, "value"));
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		Map<String,Object> paths = new LinkedHashMap<>();
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/magnitude",
+				String.valueOf(value));
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/time[1]/value",
+				timestamp);
+		paths.put(
+				"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+				comment);
+		return buildWrapperPayload(onsId,
+				"nl.Detoxhome::openEHR-EHR-COMPOSITION.vas_report.v0.2.0", paths);
+	}
+
+	private String buildSosPayload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		Map<String,Object> answers = requireObjectMap(compact, "answers");
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		Map<String,Object> paths = new LinkedHashMap<>();
+		for (int i = 1; i <= 33; i++) {
+			String questionId = String.format("q%02d", i);
+			int score = requireIntRange(answers, questionId, 0, 4);
+			int itemId = 9 + i * 2;
+			int valueId = itemId + 1;
+			paths.put(String.format(
+					"/content[id0.0.100.1,1]/data[id8,1]/events[id9,1]/data[id10,1]/items[id%d,%d]/value[id%d,1]/symbol[1]/defining_code[1]/code_string",
+					itemId, i, valueId), mapSosScoreCode(score));
+			paths.put(String.format(
+					"/content[id0.0.100.1,1]/data[id8,1]/events[id9,1]/data[id10,1]/items[id%d,%d]/value[id%d,1]/value",
+					itemId, i, valueId), String.valueOf(score));
+		}
+		paths.put("/content[id0.0.100.1,1]/data[id8,1]/events[id9,1]/time[1]/value",
+				timestamp);
+		paths.put(
+				"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+				comment);
+		return buildWrapperPayload(onsId,
+				"nl.Detoxhome::openEHR-EHR-COMPOSITION.subjetieve_onthoudingsschaal_report.v1.0.0",
+				paths);
+	}
+
+	private String buildDass21Payload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		Map<String,Object> answers = requireObjectMap(compact, "answers");
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		Map<String,Object> paths = new LinkedHashMap<>();
+		for (int i = 1; i <= DASS21_ITEM_IDS.length; i++) {
+			String questionId = String.format("q%02d", i);
+			int score = requireIntRange(answers, questionId, 0, 3);
+			int itemId = DASS21_ITEM_IDS[i - 1];
+			int valueId = itemId + 1;
+			paths.put(String.format(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id%d,%d]/value[id%d,1]/symbol[1]/defining_code[1]/code_string",
+					itemId, i, valueId), mapDassScoreCode(score));
+			paths.put(String.format(
+					"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id%d,%d]/value[id%d,1]/value",
+					itemId, i, valueId), String.valueOf(score));
+		}
+		paths.put("/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/time[1]/value",
+				timestamp);
+		paths.put(
+				"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+				comment);
+		return buildWrapperPayload(onsId,
+				"nl.Detoxhome::openEHR-EHR-COMPOSITION.depressie_angst_stress_report.v1.0.0",
+				paths);
+	}
+
+	private String buildTemperaturePayload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		double value = requireNumber(compact, "value");
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		Map<String,Object> paths = new LinkedHashMap<>();
+		paths.put(
+				"/content[id0.0.2,1]/data[id3,1]/events[id4,1]/data[id2,1]/items[id5.1,1]/value[id9003,1]/units",
+				resolveTemperatureUnit(compact));
+		paths.put(
+				"/content[id0.0.2,1]/data[id3,1]/events[id4,1]/data[id2,1]/items[id5.1,1]/value[id9003,1]/magnitude",
+				formatOneDecimalWithComma(value));
+		paths.put(
+				"/content[id0.0.2,1]/data[id3,1]/events[id4,1]/data[id2,1]/items[id5.1,1]/value[id9003,1]/precision",
+				1);
+		paths.put(
+				"/content[id0.0.2,1]/data[id3,1]/events[id4,1]/data[id2,1]/items[id64,2]/value[id9004,1]/value",
+				comment);
+		paths.put(
+				"/content[id0.0.2,1]/data[id3,1]/events[id4,1]/time[1]/value",
+				timestamp);
+		return buildWrapperPayload(onsId,
+				"openEHR-EHR-COMPOSITION.body_temperature_report.v1.0.0", paths);
+	}
+
+	private String buildSaturationPayload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		int numerator = (int)Math.round(requireNumber(compact, "value"));
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		Map<String,Object> paths = new LinkedHashMap<>();
+		paths.put(
+				"/content[id0.0.2,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id7.1,1]/value[id9002,1]/numerator",
+				numerator);
+		paths.put(
+				"/content[id0.0.2,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id7.1,1]/value[id9002,1]/denominator",
+				100);
+		paths.put(
+				"/content[id0.0.2,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id7.1,1]/value[id9002,1]/precision",
+				0);
+		paths.put(
+				"/content[id0.0.2,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id37.1,2]/value[id9007,1]/value",
+				comment);
+		paths.put("/content[id0.0.2,1]/data[id2,1]/events[id3,1]/time[1]/value",
+				timestamp);
+		return buildWrapperPayload(onsId,
+				"com.nedap::openEHR-EHR-COMPOSITION.Pulse_oximetry.v0.0.1", paths);
+	}
+
+	private String buildBacPayload(Map<String,Object> compact, int onsId,
+			String fallbackOnsTimestamp, ZoneId queueZone) {
+		double rawValue = requireNumber(compact, "value");
+		String unit = findOptionalString(compact, "unit");
+		double percentValue = normalizeBacToPercent(rawValue, unit);
+		String comment = findOptionalString(compact, "comment", "text", "opmerking");
+		if (comment == null)
+			comment = "";
+		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
+				fallbackOnsTimestamp);
+		Map<String,Object> paths = new LinkedHashMap<>();
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/units",
+				"%");
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/magnitude",
+				formatTwoDecimalsWithComma(percentValue));
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/data[id4,1]/items[id5,1]/value[id6,1]/precision",
+				2);
+		paths.put(
+				"/content[id0.0.100.1,1]/data[id2,1]/events[id3,1]/time[1]/value",
+				timestamp);
+		paths.put(
+				"/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
+				comment);
+		return buildWrapperPayload(onsId,
+				"nl.DetoxAtHome::openEHR-EHR-COMPOSITION.bac_report.v0.1.0", paths);
+	}
+
 	private String buildDetoxDagstartPayload(Map<String,Object> compact,
 			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
 		String hoeGaatHetVanochtend = requireString(compact,
@@ -456,39 +822,21 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 
 	private String buildAfwijkingsbeoordelingPayload(Map<String,Object> compact,
 			int onsId, String fallbackOnsTimestamp, ZoneId queueZone) {
-		CodedOption openingsvraag = requireCodedOption(compact,
-				AFWIJKING_OPENINGSVRAAG_OPTIONS,
-				"openingsvraag",
-				"hoeGaatHet",
-				"Hoe gaat het");
-		boolean hebJeHulpNodig = requireBoolean(compact, "hebJeHulpNodig",
-				"hulpNodig", "Heb je hulp nodig?");
+		CodedOption openingsvraag = resolveAfwijkingsOpeningsvraag(compact);
+		Boolean hebJeHulpNodig = findOptionalBoolean(compact, "hebJeHulpNodig",
+				"hulpNodig", "deviation_needs_help", "needsHelp");
 		String waarHulpNodig = findOptionalString(compact,
-				"waarHebJeHulpBijNodig",
-				"hulpNodigWaarbij",
-				"Waar heb je hulp bij nodig?");
-		if (hebJeHulpNodig && (waarHulpNodig == null || waarHulpNodig.isBlank())) {
-			throw new IllegalArgumentException(
-					"Missing required field: waarHebJeHulpBijNodig");
-		}
-		CodedOption gebruik = findCodedOption(compact,
-				AFWIJKING_GEBRUIK_OPTIONS,
-				"gebruik",
-				"hebJeGebruiktOfGaJeGebruiken",
-				"Hebje gebruikt, of ben je van plan om te gaan gebruiken?");
-		CodedOption alleen = findCodedOption(compact,
-				AFWIJKING_ALLEEN_OPTIONS,
-				"alleenOfNiet",
-				"benJeAlleen",
-				"Ben je op dit moment alleen?");
-		CodedOption hoeSnel = findCodedOption(compact,
-				AFWIJKING_HOE_SNEL_OPTIONS,
-				"hoeSnelHulp",
-				"snelheidHulp",
-				"En hoe snel heb je hulp nodig?");
-		if (hebJeHulpNodig && hoeSnel == null) {
-			throw new IllegalArgumentException("Missing required field: hoeSnelHulp");
-		}
+				"waarHebJeHulpBijNodig", "hulpNodigWaarbij",
+				"deviation_help_request", "helpRequest");
+		CodedOption gebruik = resolveAfwijkingsGebruik(compact);
+		CodedOption alleen = resolveAfwijkingsAlleen(compact);
+		Boolean vertrouwdeOmgeving = findOptionalBoolean(compact,
+				"vertrouwdeOmgeving", "deviation_trusted_environment",
+				"trustedEnvironment");
+		CodedOption hoeSnel = resolveAfwijkingsHoeSnel(compact);
+		String comment = findOptionalString(compact, "comment", "opmerking", "text");
+		if (comment == null)
+			comment = "";
 		String timestamp = resolvePayloadOnsTimestamp(compact, queueZone,
 				fallbackOnsTimestamp);
 		try {
@@ -503,14 +851,18 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 					"com.nedap.TE4776.employee::1497");
 			paths.put("/composer[1]/external_ref[1]/namespace", "demographic");
 			paths.put("/composer[1]/external_ref[1]/type", "PERSON");
-			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/code_string",
-					openingsvraag.codeString);
-			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/terminology_id[1]/value",
-					openingsvraag.terminologyId);
-			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/value",
-					openingsvraag.value);
-			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id10,2]/value[id11,1]/value",
-					hebJeHulpNodig);
+			if (openingsvraag != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/code_string",
+						openingsvraag.codeString);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/defining_code[1]/terminology_id[1]/value",
+						openingsvraag.terminologyId);
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id8,1]/value[id9,1]/value",
+						openingsvraag.value);
+			}
+			if (hebJeHulpNodig != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id10,2]/value[id11,1]/value",
+						hebJeHulpNodig);
+			}
 			if (waarHulpNodig != null && !waarHulpNodig.isBlank()) {
 				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id12,3]/value[id13,1]/value",
 						waarHulpNodig);
@@ -531,23 +883,202 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id24,5]/value[id25,1]/value",
 						alleen.value);
 			}
+			if (vertrouwdeOmgeving != null) {
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id32,6]/value[id33,1]/value",
+						vertrouwdeOmgeving);
+			}
 			if (hoeSnel != null) {
-				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/defining_code/code_string",
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,7]/value[id31,1]/defining_code[1]/code_string",
 						hoeSnel.codeString);
-				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/defining_code/terminology_id/value",
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,7]/value[id31,1]/defining_code[1]/terminology_id[1]/value",
 						hoeSnel.terminologyId);
-				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,6]/value[id31,1]/value",
+				paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/data[id7,1]/items[id30,7]/value[id31,1]/value",
 						hoeSnel.value);
 			}
 			paths.put("/content[id0.0.100.1,1]/data[id5,1]/events[id6,1]/time[1]/value",
 					timestamp);
 			paths.put("/content[id0.0.101,2]/data[id2,1]/items[id3.1,1]/value[id4,1]/value",
-					"");
+					comment);
 			String pathsString = jsonMapper.writeValueAsString(paths);
 			Map<String,Object> wrapper = new LinkedHashMap<>();
 			wrapper.put("clientId", onsId);
 			wrapper.put("archetypeId",
-					"nl.Detoxhome::openEHR-EHR-COMPOSITION.afwijkingsbeoordeling_report.v1.0.0");
+					"nl.Detoxhome::openEHR-EHR-COMPOSITION.afwijkingsbeoordeling_report.v1.1.0");
+			wrapper.put("pathsAndValues", pathsString);
+			return jsonMapper.writeValueAsString(wrapper);
+		} catch (Exception ex) {
+			throw new IllegalArgumentException(
+					"Failed to build processed payload JSON");
+		}
+	}
+
+	private CodedOption resolveAfwijkingsOpeningsvraag(Map<String,Object> compact) {
+		Object rawValue = findOptionalValue(compact, "openingsvraag", "hoeGaatHet",
+				"Hoe gaat het", "deviation_how_are_you", "howAreYou");
+		String normalized = normalizeToken(rawValue);
+		if (normalized == null)
+			return null;
+		if ("nietgoed".equals(normalized) || "notgood".equals(normalized))
+			return AFWIJKING_OPENINGSVRAAG_OPTIONS.get("at3");
+		if ("goed".equals(normalized) || "good".equals(normalized))
+			return AFWIJKING_OPENINGSVRAAG_OPTIONS.get("at4");
+		return findCodedOptionOptional(compact, AFWIJKING_OPENINGSVRAAG_OPTIONS,
+				"openingsvraag", "hoeGaatHet", "Hoe gaat het",
+				"deviation_how_are_you");
+	}
+
+	private CodedOption resolveAfwijkingsGebruik(Map<String,Object> compact) {
+		CodedOption option = findCodedOptionOptional(compact,
+				AFWIJKING_GEBRUIK_OPTIONS, "gebruik",
+				"hebJeGebruiktOfGaJeGebruiken",
+				"deviation_substance_use_risk");
+		if (option != null)
+			return option;
+		Object rawValue = findOptionalValue(compact, "gebruik",
+				"deviation_substance_use_risk");
+		String normalized = normalizeToken(rawValue);
+		if (normalized == null)
+			return null;
+		if ("ja".equals(normalized) || "yes".equals(normalized) ||
+				"true".equals(normalized))
+			return AFWIJKING_GEBRUIK_OPTIONS.get("at17");
+		if ("nee".equals(normalized) || "no".equals(normalized) ||
+				"false".equals(normalized))
+			return AFWIJKING_GEBRUIK_OPTIONS.get("at15");
+		return AFWIJKING_GEBRUIK_OPTIONS.get("at15");
+	}
+
+	private CodedOption resolveAfwijkingsAlleen(Map<String,Object> compact) {
+		CodedOption option = findCodedOptionOptional(compact,
+				AFWIJKING_ALLEEN_OPTIONS, "alleenOfNiet", "benJeAlleen",
+				"deviation_is_alone");
+		if (option != null)
+			return option;
+		Object rawValue = findOptionalValue(compact, "alleenOfNiet",
+				"deviation_is_alone");
+		String normalized = normalizeToken(rawValue);
+		if (normalized == null)
+			return null;
+		if ("ja".equals(normalized) || "yes".equals(normalized) ||
+				"true".equals(normalized))
+			return AFWIJKING_ALLEEN_OPTIONS.get("at22");
+		if ("nee".equals(normalized) || "no".equals(normalized) ||
+				"false".equals(normalized))
+			return AFWIJKING_ALLEEN_OPTIONS.get("at21");
+		return AFWIJKING_ALLEEN_OPTIONS.get("at22");
+	}
+
+	private CodedOption resolveAfwijkingsHoeSnel(Map<String,Object> compact) {
+		CodedOption option = findCodedOptionOptional(compact,
+				AFWIJKING_HOE_SNEL_OPTIONS, "hoeSnelHulp", "snelheidHulp",
+				"deviation_help_urgency");
+		if (option != null)
+			return option;
+		Object rawValue = findOptionalValue(compact, "hoeSnelHulp",
+				"snelheidHulp", "deviation_help_urgency");
+		String normalized = normalizeToken(rawValue);
+		if (normalized == null)
+			return null;
+		if ("binnenuur".equals(normalized))
+			return AFWIJKING_HOE_SNEL_OPTIONS.get("at27");
+		if ("binnendagdeel".equals(normalized))
+			return AFWIJKING_HOE_SNEL_OPTIONS.get("at28");
+		if ("volgendeafspraak".equals(normalized) ||
+				"bijdevolgendeafspraakmetmijnzorgverlener".equals(normalized))
+			return AFWIJKING_HOE_SNEL_OPTIONS.get("at29");
+		return AFWIJKING_HOE_SNEL_OPTIONS.get("at28");
+	}
+
+	private String mapSosScoreCode(int score) {
+		switch (score) {
+			case 0:
+				return "at7";
+			case 1:
+				return "at6";
+			case 2:
+				return "at5";
+			case 3:
+				return "at4";
+			case 4:
+				return "at3";
+			default:
+				throw new IllegalArgumentException("Invalid SOS score value");
+		}
+	}
+
+	private String mapDassScoreCode(int score) {
+		switch (score) {
+			case 0:
+				return "at8";
+			case 1:
+				return "at9";
+			case 2:
+				return "at10";
+			case 3:
+				return "at11";
+			default:
+				throw new IllegalArgumentException("Invalid DASS21 score value");
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String,Object> requireObjectMap(Map<String,Object> map, String key) {
+		Object value = map.get(key);
+		if (!(value instanceof Map<?,?> answerMap))
+			throw new IllegalArgumentException("Missing required field: " + key);
+		return (Map<String,Object>)answerMap;
+	}
+
+	private int requireIntRange(Map<String,Object> map, String key, int minValue,
+			int maxValue) {
+		double number = requireNumber(map, key);
+		int rounded = (int)Math.round(number);
+		if (Math.abs(number - rounded) > 0.000001d) {
+			throw new IllegalArgumentException("Invalid number for field: " + key);
+		}
+		if (rounded < minValue || rounded > maxValue) {
+			throw new IllegalArgumentException("Invalid number for field: " + key);
+		}
+		return rounded;
+	}
+
+	private String formatOneDecimalWithComma(double value) {
+		return String.format(java.util.Locale.US, "%.1f", value).replace('.', ',');
+	}
+
+	private String formatTwoDecimalsWithComma(double value) {
+		return String.format(java.util.Locale.US, "%.2f", value).replace('.', ',');
+	}
+
+	private double normalizeBacToPercent(double value, String unit) {
+		if (unit == null || unit.isBlank())
+			return value / 10.0d;
+		String normalized = unit.trim().toLowerCase(Locale.ROOT);
+		if ("\u2030".equals(normalized) || "promille".equals(normalized))
+			return value / 10.0d;
+		if ("%".equals(normalized) || "percent".equals(normalized))
+			return value;
+		return value / 10.0d;
+	}
+
+	private String resolveTemperatureUnit(Map<String,Object> compact) {
+		String unit = findOptionalString(compact, "unit");
+		if (unit == null || unit.isBlank())
+			return "Cel";
+		String normalized = unit.trim().toLowerCase();
+		if ("cel".equals(normalized) || "c".equals(normalized) ||
+				"°c".equals(normalized) || "celsius".equals(normalized))
+			return "Cel";
+		return unit;
+	}
+
+	private String buildWrapperPayload(int onsId, String archetypeId,
+			Map<String,Object> paths) {
+		try {
+			String pathsString = jsonMapper.writeValueAsString(paths);
+			Map<String,Object> wrapper = new LinkedHashMap<>();
+			wrapper.put("clientId", onsId);
+			wrapper.put("archetypeId", archetypeId);
 			wrapper.put("pathsAndValues", pathsString);
 			return jsonMapper.writeValueAsString(wrapper);
 		} catch (Exception ex) {
@@ -653,6 +1184,74 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		return null;
 	}
 
+	private Object findOptionalValue(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null)
+				continue;
+			return value;
+		}
+		return null;
+	}
+
+	private Boolean findOptionalBoolean(Map<String,Object> map, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			Boolean boolValue = parseBooleanValue(value);
+			if (boolValue != null)
+				return boolValue;
+		}
+		return null;
+	}
+
+	private Boolean parseBooleanValue(Object value) {
+		if (value == null)
+			return null;
+		if (value instanceof Boolean boolValue)
+			return boolValue;
+		String normalized = normalizeToken(value);
+		if (normalized == null)
+			return null;
+		if ("true".equals(normalized) || "yes".equals(normalized) ||
+				"ja".equals(normalized) || "1".equals(normalized))
+			return true;
+		if ("false".equals(normalized) || "no".equals(normalized) ||
+				"nee".equals(normalized) || "0".equals(normalized))
+			return false;
+		return null;
+	}
+
+	private CodedOption findCodedOptionOptional(Map<String,Object> map,
+			Map<String,CodedOption> options, String... keys) {
+		for (String key : keys) {
+			if (!map.containsKey(key))
+				continue;
+			Object value = map.get(key);
+			if (value == null || value.toString().isBlank())
+				continue;
+			String optionValue = value.toString().trim();
+			CodedOption option = options.get(optionValue.toLowerCase(Locale.ROOT));
+			if (option == null)
+				option = options.get(normalizeOptionValue(optionValue));
+			if (option != null)
+				return option;
+		}
+		return null;
+	}
+
+	private String normalizeToken(Object value) {
+		if (value == null)
+			return null;
+		String str = value.toString();
+		if (str == null || str.isBlank())
+			return null;
+		return str.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{Nd}]+", "");
+	}
+
 	private String resolvePayloadOnsTimestamp(Map<String,Object> compact,
 			ZoneId fallbackZone, String fallbackOnsTimestamp) {
 		ZoneId zone = parseZoneIdIfPresent(compact.get("timeZone"));
@@ -753,15 +1352,39 @@ public class DetoxMessageQueueListener implements DatabaseActionListener {
 		if (type == null)
 			return null;
 		String normalized = type.toLowerCase().replaceAll("[_\\s-]", "");
-		if ("heartrate".equals(normalized) || "heart".equals(normalized))
+		if ("heartrate".equals(normalized) || "heart".equals(normalized) ||
+				"pulse".equals(normalized))
 			return "heartrate";
 		if ("bloodpressure".equals(normalized) || "blood".equals(normalized))
 			return "bloodpressure";
 		if ("detoxdagstart".equals(normalized) || "dagstart".equals(normalized))
 			return "detox_dagstart";
 		if ("afwijkingsbeoordeling".equals(normalized) ||
-				"afwijking".equals(normalized))
+				"afwijking".equals(normalized) ||
+				"deviationassessmentquestions".equals(normalized))
 			return "afwijkingsbeoordeling";
+		if ("vas".equals(normalized) || "cravingvas".equals(normalized))
+			return "vas";
+		if ("sos".equals(normalized) ||
+				"subjectieveonthoudingsschaal".equals(normalized) ||
+				"questionnairesos".equals(normalized))
+			return "sos";
+		if ("dass21".equals(normalized) ||
+				"depressieangststress".equals(normalized) ||
+				"questionnairedass21".equals(normalized))
+			return "dass21";
+		if ("temperature".equals(normalized) ||
+				"temperatuur".equals(normalized) ||
+				"bodytemperature".equals(normalized))
+			return "temperature";
+		if ("saturation".equals(normalized) || "saturatie".equals(normalized) ||
+				"spo2".equals(normalized))
+			return "saturation";
+		if ("bac".equals(normalized) ||
+				"bloodalcoholconcentration".equals(normalized) ||
+				"bloodalcohol".equals(normalized) ||
+				"alcoholpromillage".equals(normalized))
+			return "bac";
 		return null;
 	}
 
