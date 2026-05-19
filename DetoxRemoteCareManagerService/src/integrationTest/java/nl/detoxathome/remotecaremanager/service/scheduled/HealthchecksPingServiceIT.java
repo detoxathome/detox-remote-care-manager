@@ -31,6 +31,7 @@ public class HealthchecksPingServiceIT {
 			TestConfiguration config = new TestConfiguration();
 			config.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
 					server.url("/general").toString());
+			config.set(Configuration.MOBILE_ENVIRONMENT, "production");
 			List<Long> sleepDelays = new ArrayList<>();
 			HealthchecksPingService service = newService(config, sleepDelays);
 
@@ -77,6 +78,7 @@ public class HealthchecksPingServiceIT {
 			TestConfiguration config = new TestConfiguration();
 			config.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
 					server.url("/retry").toString());
+			config.set(Configuration.MOBILE_ENVIRONMENT, "production");
 			List<Long> sleepDelays = new ArrayList<>();
 			HealthchecksPingService service = newService(config, sleepDelays);
 
@@ -106,6 +108,7 @@ public class HealthchecksPingServiceIT {
 			TestConfiguration config = new TestConfiguration();
 			config.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
 					server.url("/server-error").toString());
+			config.set(Configuration.MOBILE_ENVIRONMENT, "production");
 			List<Long> sleepDelays = new ArrayList<>();
 			HealthchecksPingService service = newService(config, sleepDelays);
 
@@ -142,14 +145,68 @@ public class HealthchecksPingServiceIT {
 	}
 
 	@Test
+	void productionAndUtwenteEnvironmentsEnablePingByDefault()
+			throws Exception {
+		for (String environment : List.of("production", "prod", "utwente")) {
+			MockWebServer server = new MockWebServer();
+			server.enqueue(new MockResponse().setResponseCode(200));
+			server.start();
+			try {
+				TestConfiguration config = new TestConfiguration();
+				config.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
+						server.url("/" + environment).toString());
+				config.set(Configuration.MOBILE_ENVIRONMENT, environment);
+				HealthchecksPingService service = newService(config,
+						new ArrayList<>());
+
+				service.runTask();
+
+				assertNotNull(server.takeRequest(2, TimeUnit.SECONDS));
+				assertEquals("success", service.getStatus().outcome());
+			} finally {
+				server.shutdown();
+			}
+		}
+	}
+
+	@Test
+	void nonProductionEnvironmentsDisablePingByDefault() throws Exception {
+		List<String> environments = new ArrayList<>(
+				List.of("local", "dev", "development", "custom", ""));
+		environments.add(null);
+		for (String environment : environments) {
+			MockWebServer server = new MockWebServer();
+			server.start();
+			try {
+				TestConfiguration config = new TestConfiguration();
+				config.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
+						server.url("/disabled").toString());
+				if (environment != null)
+					config.set(Configuration.MOBILE_ENVIRONMENT, environment);
+				HealthchecksPingService service = newService(config,
+						new ArrayList<>());
+
+				service.runTask();
+
+				assertNull(server.takeRequest(100, TimeUnit.MILLISECONDS));
+				assertEquals("disabled", service.getStatus().outcome());
+			} finally {
+				server.shutdown();
+			}
+		}
+	}
+
+	@Test
 	void invalidAndEmptyUrlsDoNotThrow() {
 		TestConfiguration invalidConfig = new TestConfiguration();
+		invalidConfig.set(Configuration.MOBILE_ENVIRONMENT, "production");
 		invalidConfig.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL,
 				"://invalid");
 		assertDoesNotThrow(() ->
 				newService(invalidConfig, new ArrayList<>()).runTask());
 
 		TestConfiguration emptyConfig = new TestConfiguration();
+		emptyConfig.set(Configuration.MOBILE_ENVIRONMENT, "production");
 		emptyConfig.set(Configuration.HEALTHCHECKS_GENERAL_PING_URL, " ");
 		assertDoesNotThrow(() ->
 				newService(emptyConfig, new ArrayList<>()).runTask());

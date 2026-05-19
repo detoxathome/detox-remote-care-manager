@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class HealthchecksPingService {
@@ -140,8 +141,16 @@ public class HealthchecksPingService {
 
 	private boolean isEnabled() {
 		String enabled = config.get(
-				Configuration.HEALTHCHECKS_GENERAL_PING_ENABLED, "true");
-		return !"false".equalsIgnoreCase(enabled);
+				Configuration.HEALTHCHECKS_GENERAL_PING_ENABLED);
+		if (enabled != null && !enabled.isBlank())
+			return "true".equalsIgnoreCase(enabled.trim());
+		String environment = config.get(Configuration.MOBILE_ENVIRONMENT);
+		if (environment == null)
+			return false;
+		environment = environment.trim().toLowerCase(Locale.ROOT);
+		return environment.equals("production") ||
+				environment.equals("prod") ||
+				environment.equals("utwente");
 	}
 
 	private boolean sendPing(HttpRequest request, int attempt)
