@@ -25,6 +25,7 @@ Together, these form a remote care setup in which care professionals configure c
 ## Documentation
 
 - [Local build and start guide](docs/local-build-and-start.md)
+- [Production deploy guide](docs/production-deploy.md)
 - [Module overview](docs/module-overview.md)
 
 # Origin: SenSeeAct
