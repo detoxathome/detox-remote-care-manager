@@ -397,6 +397,12 @@
 	color: #1d2430;
 }
 
+.remote-task-field-helper {
+	color: var(--muted-text-color);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
 .remote-task-field input,
 .remote-task-field select,
 .remote-task-field textarea {
