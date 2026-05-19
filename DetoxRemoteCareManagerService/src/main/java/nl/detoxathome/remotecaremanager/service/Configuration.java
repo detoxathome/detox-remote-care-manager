@@ -48,8 +48,6 @@ public class Configuration extends BaseConfiguration {
 	
 	public static final String WEB_URL = "webUrl";
 	public static final String MOBILE_ENVIRONMENT = "mobileEnvironment";
-
-	public static final String MOBILE_ENVIRONMENT = "mobileEnvironment";
 	public static final String MOBILE_API_BASE_URL = "mobileApiBaseUrl";
 	public static final String MOBILE_FIREBASE_OVERRIDES =
 			"mobileFirebaseOverrides";
