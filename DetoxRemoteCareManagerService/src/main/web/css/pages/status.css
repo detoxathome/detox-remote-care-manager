@@ -1,0 +1,124 @@
+.status-page {
+	padding: 36px 20px 72px 20px;
+}
+
+.status-shell {
+	display: grid;
+	gap: 24px;
+	max-width: 980px;
+	margin: 0 auto;
+}
+
+.status-header,
+.status-panel {
+	background: var(--surface-color);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	box-shadow: 0px 18px 36px rgba(13, 26, 51, 0.08);
+}
+
+.status-header {
+	padding: 28px;
+}
+
+.status-header h1,
+.status-panel h2 {
+	margin: 0px;
+}
+
+.status-header p,
+.status-panel p {
+	margin: 12px 0px 0px 0px;
+	color: var(--muted-text-color);
+	line-height: 1.7;
+}
+
+.status-kicker {
+	margin: 0px 0px 10px 0px !important;
+	font-family: var(--heading-font);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--blue-color) !important;
+	text-transform: uppercase;
+}
+
+.status-panel {
+	overflow: hidden;
+}
+
+.status-panel-header {
+	display: flex;
+	gap: 18px;
+	align-items: flex-start;
+	justify-content: space-between;
+	padding: 24px 28px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.status-badge {
+	flex-shrink: 0;
+	padding: 6px 10px;
+	border-radius: 8px;
+	background: var(--surface-muted);
+	border: 1px solid var(--border-color);
+	color: var(--text-color);
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.status-badge.is-success {
+	background: #e7f6ec;
+	border-color: #9ed7ae;
+	color: #12612b;
+}
+
+.status-badge.is-warning {
+	background: #fff5da;
+	border-color: #e8ca78;
+	color: #7a5700;
+}
+
+.status-badge.is-error {
+	background: #fdeaea;
+	border-color: #efaaaa;
+	color: var(--danger-color);
+}
+
+.status-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	margin: 0px;
+}
+
+.status-grid div {
+	padding: 20px 28px;
+	border-right: 1px solid var(--border-color);
+	border-bottom: 1px solid var(--border-color);
+}
+
+.status-grid dt {
+	margin: 0px 0px 8px 0px;
+	color: var(--muted-text-color);
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.status-grid dd {
+	margin: 0px;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.5;
+	word-break: break-word;
+}
+
+@media (max-width: 640px) {
+	.status-panel-header {
+		display: grid;
+		padding: 22px;
+	}
+
+	.status-grid div {
+		padding: 18px 22px;
+	}
+}
