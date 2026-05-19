@@ -10,8 +10,17 @@ import nl.detoxathome.remotecaremanager.client.model.*;
 import nl.detoxathome.remotecaremanager.client.model.compat.ProjectV1;
 import nl.detoxathome.remotecaremanager.client.model.compat.ProjectV2;
 import nl.detoxathome.remotecaremanager.client.model.compat.ProjectV3;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxDigitalGuideDialogueCapability;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxDigitalGuideDialogueCapabilityTable;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxDigitalGuideDialogueOptions;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxLinkedSubjectSummary;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxMessageQueue;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxMessageQueueTable;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskConfiguration;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskConfigurationTable;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequest;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestResult;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestTable;
 import nl.detoxathome.remotecaremanager.client.model.sample.LocalTimeSample;
 import nl.detoxathome.remotecaremanager.client.model.sample.Sample;
 import nl.detoxathome.remotecaremanager.client.model.sample.UTCSample;
@@ -20,6 +29,11 @@ import nl.detoxathome.remotecaremanager.client.project.ProjectRepository;
 import nl.detoxathome.remotecaremanager.dao.*;
 import nl.detoxathome.remotecaremanager.service.*;
 import nl.detoxathome.remotecaremanager.service.controller.model.SelectFilterParser;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxDigitalGuideDialogueCapabilityValidator;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxDigitalGuideDialogueCapabilityValidator.DialogueCapabilityValidationException;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxDigitalGuideDialogueRegistry;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxTaskConfigurationValidator;
+import nl.detoxathome.remotecaremanager.service.detox.DetoxTaskConfigurationValidator.TaskValidationException;
 import nl.detoxathome.remotecaremanager.service.exception.BadRequestException;
 import nl.detoxathome.remotecaremanager.service.exception.ForbiddenException;
 import nl.detoxathome.remotecaremanager.service.exception.HttpException;
@@ -35,6 +49,7 @@ import nl.rrd.utils.json.JsonAtomicToken;
 import nl.rrd.utils.json.JsonMapper;
 import nl.rrd.utils.json.JsonObjectStreamReader;
 import nl.rrd.utils.json.JsonParseException;
+import nl.rrd.utils.datetime.DateTimeUtils;
 import nl.rrd.utils.validation.TypeConversion;
 import nl.rrd.utils.validation.ValidationException;
 import org.slf4j.Logger;
@@ -385,6 +400,145 @@ public class ProjectControllerExecution {
 		return UserController.getCompatUserList(version, subjects);
 	}
 
+	public List<DetoxLinkedSubjectSummary> getDetoxSubjects(
+			ProtocolVersion version, Database authDb, User user,
+			BaseProject project, String includeInactiveStr)
+			throws HttpException, Exception {
+		if (user.getRole() == Role.PATIENT)
+			throw new ForbiddenException();
+		boolean includeInactive;
+		try {
+			includeInactive = TypeConversion.getBoolean(includeInactiveStr);
+		} catch (ParseException ex) {
+			throw BadRequestException.withInvalidInput(
+					new HttpFieldError("includeInactive", ex.getMessage()));
+		}
+		List<User> projectSubjects = User.findProjectUsers(project.getCode(),
+				authDb, user, Role.PATIENT, includeInactive);
+		String databaseName = DatabaseLoader.getProjectDatabaseName(
+				project.getCode());
+		List<DetoxLinkedSubjectSummary> result = new ArrayList<>();
+		for (User subjectUser : projectSubjects) {
+			try {
+				User.findAccessibleProjectUserByUserid(subjectUser.getUserid(),
+						project.getCode(), DetoxTaskConfigurationTable.NAME,
+						AccessMode.W, authDb, user);
+			} catch (ForbiddenException ex) {
+				continue;
+			}
+			DetoxOnsLookup lookup = DetoxOnsLookup.findBySsaId(authDb,
+					subjectUser.getUserid());
+			if (lookup == null)
+				continue;
+			int pushDeviceCount = countTaskPushRegistrations(authDb,
+					subjectUser.getUserid(), project.getCode(), databaseName);
+			DetoxLinkedSubjectSummary summary =
+					new DetoxLinkedSubjectSummary();
+			summary.setUserId(subjectUser.getUserid());
+			summary.setDisplayName(getUserDisplayName(subjectUser));
+			summary.setActive(subjectUser.isActive());
+			summary.setOnsId(lookup.getOnsId());
+			summary.setOnsInstance(lookup.getOnsInstance());
+			summary.setPushReady(pushDeviceCount > 0);
+			summary.setPushRegisteredDeviceCount(pushDeviceCount);
+			result.add(summary);
+		}
+		result.sort(Comparator.comparing(DetoxLinkedSubjectSummary::getDisplayName,
+				String.CASE_INSENSITIVE_ORDER));
+		return result;
+	}
+
+	public DetoxTaskRefreshRequestResult createDetoxTaskRefreshRequest(
+			ProtocolVersion version, Database authDb, Database db, User user,
+			BaseProject project, String subject)
+			throws HttpException, Exception {
+		if (user.getRole() == Role.PATIENT)
+			throw new ForbiddenException();
+		ProjectUserAccess userAccess = User.findAccessibleProjectUser(version,
+				subject, project.getCode(), DetoxTaskRefreshRequestTable.NAME,
+				AccessMode.W, authDb, user);
+		userAccess.checkMatchesRange(null, null);
+		User subjectUser = userAccess.getUser();
+		String requestToken = UUID.randomUUID().toString();
+		DetoxTaskRefreshRequest refreshRequest = new DetoxTaskRefreshRequest();
+		refreshRequest.setUser(subjectUser.getUserid());
+		refreshRequest.updateDateTime(DateTimeUtils.nowMs(subjectUser.toTimeZone()));
+		refreshRequest.setRequestToken(requestToken);
+		refreshRequest.setRequestedByUser(user.getUserid());
+		db.insert(DetoxTaskRefreshRequestTable.NAME, refreshRequest);
+		DetoxTaskRefreshRequestResult result =
+				new DetoxTaskRefreshRequestResult();
+		result.setRequestToken(requestToken);
+		return result;
+	}
+
+	public DetoxDigitalGuideDialogueOptions getDetoxDigitalGuideDialogues(
+			ProtocolVersion version, Database authDb, Database db, User user,
+			BaseProject project, String subject)
+			throws HttpException, Exception {
+		ProjectUserAccess userAccess = User.findAccessibleProjectUser(version,
+				subject, project.getCode(),
+				DetoxDigitalGuideDialogueCapabilityTable.NAME, AccessMode.R,
+				authDb, user);
+		userAccess.checkMatchesRange(null, null);
+		User subjectUser = userAccess.getUser();
+		DatabaseCriteria criteria = new DatabaseCriteria.Equal("user",
+				subjectUser.getUserid());
+		DatabaseSort[] sort = new DatabaseSort[] {
+				new DatabaseSort("utcTime", false),
+				new DatabaseSort("id", false)
+		};
+		List<DetoxDigitalGuideDialogueCapability> records = db.select(
+				new DetoxDigitalGuideDialogueCapabilityTable(), criteria, 0,
+				sort);
+		Map<String,DetoxDigitalGuideDialogueCapability> latestByDevice =
+				new LinkedHashMap<>();
+		DetoxDigitalGuideDialogueCapability latestRecord = null;
+		for (DetoxDigitalGuideDialogueCapability record : records) {
+			String sourceDeviceId = record.getSourceDeviceId();
+			if (sourceDeviceId == null || sourceDeviceId.isBlank())
+				continue;
+			if (!latestByDevice.containsKey(sourceDeviceId))
+				latestByDevice.put(sourceDeviceId, record);
+			if (latestRecord == null)
+				latestRecord = record;
+		}
+
+		DetoxDigitalGuideDialogueOptions result =
+				new DetoxDigitalGuideDialogueOptions();
+		List<String> defaultDialogueIds =
+				DetoxDigitalGuideDialogueRegistry.getDefaultDialogueIds();
+		result.setDefaultDialogueIds(defaultDialogueIds);
+		result.setEffectiveDialogueIds(defaultDialogueIds);
+		if (latestByDevice.isEmpty())
+			return result;
+
+		List<List<String>> dialogueIdLists = new ArrayList<>();
+		List<String> sourceDeviceIds = new ArrayList<>(latestByDevice.keySet());
+		Collections.sort(sourceDeviceIds);
+		for (DetoxDigitalGuideDialogueCapability capability :
+				latestByDevice.values()) {
+			dialogueIdLists.add(capability.getDialogueIdsList());
+		}
+		List<String> compatibleDialogueIds =
+				DetoxDigitalGuideDialogueRegistry.intersectDialogueIds(
+						dialogueIdLists);
+		result.setDeviceReported(true);
+		result.setDeviceSnapshotCount(latestByDevice.size());
+		result.setSourceDeviceIds(sourceDeviceIds);
+		result.setReportedDialogueIds(compatibleDialogueIds);
+		result.setEffectiveDialogueIds(compatibleDialogueIds);
+		if (latestRecord != null) {
+			result.setLanguage(latestRecord.getLanguage());
+			result.setAppVersion(latestRecord.getAppVersion());
+			result.setReportedAt(DateTimeUtils.ZONED_FORMAT.format(
+					ZonedDateTime.ofInstant(
+							Instant.ofEpochMilli(latestRecord.getUtcTime()),
+							ZoneOffset.UTC)));
+		}
+		return result;
+	}
+
 	/**
 	 * Runs the query registerWatchSubjects.
 	 *
@@ -581,6 +735,35 @@ public class ProjectControllerExecution {
 		return null;
 	}
 
+	public Object getDetoxSubjectRecords(ProtocolVersion version,
+			Database authDb, Database db, User user, BaseProject project,
+			String table, String subject, String start, String end,
+			HttpServletRequest request, HttpServletResponse response)
+			throws HttpException, Exception {
+		List<? extends DatabaseObject> records = getRecords(version, authDb,
+				db, user, project, table, subject, start, end, request);
+		response.setContentType("application/json");
+		try (Writer writer = new OutputStreamWriter(response.getOutputStream(),
+				StandardCharsets.UTF_8)) {
+			writer.write("[");
+			DatabaseObjectMapper dbMapper = new DatabaseObjectMapper();
+			ObjectMapper jsonMapper = new ObjectMapper();
+			boolean first = true;
+			for (DatabaseObject record : records) {
+				if (!first)
+					writer.write(",");
+				else
+					first = false;
+				Map<String,Object> map = dbMapper.objectToMap(record, true);
+				map = addTaskSyncCompatMetadata(map);
+				String json = jsonMapper.writeValueAsString(map);
+				writer.write(json);
+			}
+			writer.write("]");
+		}
+		return null;
+	}
+
 	public static List<? extends DatabaseObject> getRecords(
 			ProtocolVersion version, Database authDb, Database db, User user,
 			BaseProject project, String table, String subject, String start,
@@ -615,6 +798,41 @@ public class ProjectControllerExecution {
 			else
 				compatUser = subjectUser.getEmail();
 			PropertyWriter.writeProperty(record, "user", compatUser);
+		}
+	}
+
+	private Map<String,Object> addTaskSyncCompatMetadata(Map<String,Object> map) {
+		Map<String,Object> result = new LinkedHashMap<>(map);
+		Object id = result.get("id");
+		if (id != null) {
+			result.putIfAbsent("_id", id);
+			result.putIfAbsent("recordId", id);
+		}
+		String createdAt = utcTimeToIsoString(result.get("utcTime"));
+		if (createdAt != null) {
+			result.putIfAbsent("createdAt", createdAt);
+			result.putIfAbsent("timestamp", createdAt);
+			result.putIfAbsent("_created", createdAt);
+		}
+		return result;
+	}
+
+	private String utcTimeToIsoString(Object utcTime) {
+		if (utcTime == null)
+			return null;
+		try {
+			long epochMillis;
+			if (utcTime instanceof Number) {
+				epochMillis = ((Number)utcTime).longValue();
+			} else {
+				String s = utcTime.toString().trim();
+				if (s.isEmpty())
+					return null;
+				epochMillis = Long.parseLong(s);
+			}
+			return Instant.ofEpochMilli(epochMillis).toString();
+		} catch (Exception ex) {
+			return null;
 		}
 	}
 
@@ -950,6 +1168,7 @@ public class ProjectControllerExecution {
 					"Table \"%s\" not found in project \"%s\"",
 					table, project.getCode()));
 		}
+		ensureDetoxTableSupportsInsert(table);
 		User subjectUser = null;
 		DatabaseCache cache = DatabaseCache.getInstance();
 		List<String> fields = cache.getTableFields(db, table);
@@ -1019,6 +1238,7 @@ public class ProjectControllerExecution {
 			HttpServletRequest request, Database authDb, Database db, User user,
 			BaseProject project, String table, String recordId, String subject)
 			throws HttpException, Exception {
+		ensureDetoxTableSupportsNoMutation(table, "update");
 		DatabaseTableDef<?> tableDef = project.findTable(table);
 		if (tableDef == null) {
 			throw new NotFoundException(String.format(
@@ -1092,6 +1312,7 @@ public class ProjectControllerExecution {
 			Database db, User user, BaseProject project, String table,
 			String subject, String start, String end,
 			HttpServletRequest request) throws HttpException, Exception {
+		ensureDetoxTableSupportsNoMutation(table, "delete");
 		DatabaseTableDef<?> tableDef = project.findTable(table);
 		if (tableDef == null) {
 			throw new NotFoundException(String.format(
@@ -1123,6 +1344,7 @@ public class ProjectControllerExecution {
 	public Object deleteRecord(ProtocolVersion version, Database authDb,
 			Database db, User user, BaseProject project, String table,
 			String recordId, String subject) throws HttpException, Exception {
+		ensureDetoxTableSupportsNoMutation(table, "delete");
 		DatabaseTableDef<?> tableDef = project.findTable(table);
 		if (tableDef == null) {
 			throw new NotFoundException(String.format(
@@ -1173,6 +1395,7 @@ public class ProjectControllerExecution {
 	public Object purgeTable(ProtocolVersion version, Database authDb,
 			Database db, User user, BaseProject project, String table,
 			String subject) throws HttpException, Exception {
+		ensureDetoxTableSupportsNoMutation(table, "purge");
 		DatabaseTableDef<?> tableDef = project.findTable(table);
 		if (tableDef == null) {
 			throw new NotFoundException(String.format(
@@ -1430,7 +1653,107 @@ public class ProjectControllerExecution {
 				user.toTimeZone();
 		validateDetoxQueueWriteRecord(table, result, defaultTz, map);
 		CommonCrudController.validateWriteRecordTime(defaultTz, result, map);
+		validateDetoxTaskWriteRecord(table, result, user, subject);
+		validateDetoxDialogueCapabilityWriteRecord(table, result, user, subject);
 		return result;
+	}
+
+	private static void ensureDetoxTableSupportsInsert(String table)
+			throws ForbiddenException {
+		if (DetoxTaskRefreshRequestTable.NAME.equals(table)) {
+			throw new ForbiddenException(
+					"Use the task refresh endpoint to create task refresh requests");
+		}
+	}
+
+	private static void ensureDetoxTableSupportsNoMutation(String table,
+			String action) throws ForbiddenException {
+		if (DetoxTaskConfigurationTable.NAME.equals(table) ||
+				DetoxTaskRefreshRequestTable.NAME.equals(table) ||
+				DetoxDigitalGuideDialogueCapabilityTable.NAME.equals(table)) {
+			throw new ForbiddenException(String.format(
+					"Append-only Detox table \"%s\" does not allow %s operations",
+					table, action));
+		}
+	}
+
+	private void validateDetoxTaskWriteRecord(DatabaseTableDef<?> table,
+			DatabaseObject record, User user, User subject)
+			throws HttpException {
+		if (!DetoxTaskConfigurationTable.NAME.equals(table.getName()) ||
+				!(record instanceof DetoxTaskConfiguration taskConfig)) {
+			return;
+		}
+		try {
+			DetoxTaskConfigurationValidator.validateTaskConfigurationRecord(
+					taskConfig, user, subject);
+		} catch (TaskValidationException ex) {
+			throw BadRequestException.withInvalidInput(ex.toFieldError());
+		}
+	}
+
+	private void validateDetoxDialogueCapabilityWriteRecord(
+			DatabaseTableDef<?> table, DatabaseObject record, User user,
+			User subject) throws HttpException {
+		if (!DetoxDigitalGuideDialogueCapabilityTable.NAME.equals(
+				table.getName()) ||
+				!(record instanceof DetoxDigitalGuideDialogueCapability capability)) {
+			return;
+		}
+		try {
+			DetoxDigitalGuideDialogueCapabilityValidator
+					.validateDialogueCapabilityRecord(capability, user, subject);
+		} catch (DialogueCapabilityValidationException ex) {
+			throw BadRequestException.withInvalidInput(
+					new HttpFieldError(ex.getField(), ex.getMessage()));
+		}
+	}
+
+	private int countTaskPushRegistrations(Database authDb, String userId,
+			String projectCode, String databaseName) throws DatabaseException {
+		DatabaseCriteria criteria = new DatabaseCriteria.And(
+				new DatabaseCriteria.Equal("user", userId),
+				new DatabaseCriteria.Equal("project", projectCode),
+				new DatabaseCriteria.Equal("database", databaseName)
+		);
+		List<SyncPushRegistration> registrations = authDb.select(
+				new SyncPushRegistrationTable(), criteria, 0, null);
+		int result = 0;
+		for (SyncPushRegistration registration : registrations) {
+			try {
+				if (registration.toSyncReadRestriction().matchesTable(
+						DetoxTaskConfigurationTable.NAME) ||
+						registration.toSyncReadRestriction().matchesTable(
+								DetoxTaskRefreshRequestTable.NAME)) {
+					result++;
+				}
+			} catch (RuntimeException ignored) {
+				// Ignore malformed registration filters in the summary.
+			}
+		}
+		return result;
+	}
+
+	private String getUserDisplayName(User user) {
+		if (user.getFullName() != null && !user.getFullName().isBlank())
+			return user.getFullName();
+		StringBuilder builder = new StringBuilder();
+		appendNamePart(builder, user.getFirstName());
+		appendNamePart(builder, user.getPrefixes());
+		appendNamePart(builder, user.getLastName());
+		if (!builder.isEmpty())
+			return builder.toString();
+		if (user.getEmail() != null && !user.getEmail().isBlank())
+			return user.getEmail();
+		return user.getUserid();
+	}
+
+	private void appendNamePart(StringBuilder builder, String value) {
+		if (value == null || value.isBlank())
+			return;
+		if (!builder.isEmpty())
+			builder.append(' ');
+		builder.append(value.trim());
 	}
 
 	private void validateDetoxQueueWriteRecord(DatabaseTableDef<?> table,

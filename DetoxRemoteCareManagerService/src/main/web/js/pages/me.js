@@ -43,6 +43,14 @@ class MyRemoteCareManagerPage {
 			basePath + '/me/download');
 		this.addDashboardWidget(widget);
 
+		if (this._user.role == 'ADMIN' || this._user.role == 'PROFESSIONAL') {
+			widget = this.createDashboardWidget(
+				'images/icon_pencil.svg',
+				i18next.t('remote_task_editor'),
+				basePath + '/me/tasks');
+			this.addDashboardWidget(widget);
+		}
+
 		widget = this.createDashboardWidget(
 			'images/icon_logout.svg',
 			i18next.t('log_out'), null);

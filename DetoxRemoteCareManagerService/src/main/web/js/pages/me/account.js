@@ -35,7 +35,7 @@ class MyAccountPage {
 		this._createAdminOnsQueueCleanupForm();
 
 		menuController.showSidebar();
-		menuController.selectMenuItem('me-account');
+		menuController.selectMenuItem('account');
 		$(document.body).addClass('tinted-background');
 		let content = $('#content');
 		content.addClass('white-background');

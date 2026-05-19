@@ -47,6 +47,7 @@ public class Configuration extends BaseConfiguration {
 	public static final String TWILIO_VERIFY_SERVICE_SID = "twilioVerifyServiceSid";
 	
 	public static final String WEB_URL = "webUrl";
+	public static final String MOBILE_ENVIRONMENT = "mobileEnvironment";
 
 	public static final String DETOX_OUTGOING_MODE = "detoxOutgoingMode";
 	public static final String DETOX_OUTGOING_LOCAL_URL =

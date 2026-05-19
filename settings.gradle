@@ -1,13 +1,13 @@
-include ':DataAccessObjects', ':DetoxClient',
-		':DetoxRemoteCareManagerLibrary', ':DetoxRemoteCareManagerService',
-		':DetoxClientExtensions', ':DetoxRemoteCareManagerApp', 'RRDUtils'
-
 pluginManagement {
     repositories {
         gradlePluginPortal()
         mavenCentral()
     }
 }
+
+include ':DataAccessObjects', ':DetoxClient',
+		':DetoxRemoteCareManagerLibrary', ':DetoxRemoteCareManagerService',
+		':DetoxClientExtensions', ':DetoxRemoteCareManagerApp', 'RRDUtils'
 
 
 
