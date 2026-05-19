@@ -162,8 +162,7 @@ public class HealthchecksPingService {
 			return false;
 		environment = environment.trim().toLowerCase(Locale.ROOT);
 		return environment.equals("production") ||
-				environment.equals("prod") ||
-				environment.equals("utwente");
+				environment.equals("prod");
 	}
 
 	static long resolveScheduleDelayMs(Configuration config, Logger logger) {
