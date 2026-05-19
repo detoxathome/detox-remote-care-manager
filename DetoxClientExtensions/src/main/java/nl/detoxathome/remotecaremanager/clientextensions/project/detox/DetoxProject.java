@@ -2,6 +2,7 @@ package nl.detoxathome.remotecaremanager.clientextensions.project.detox;
 
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxMessageQueueTable;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxProcessedMessageQueueTable;
+import nl.detoxathome.remotecaremanager.client.model.detox.DetoxDigitalGuideDialogueCapabilityTable;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskConfigurationTable;
 import nl.detoxathome.remotecaremanager.client.model.detox.DetoxTaskRefreshRequestTable;
 import nl.detoxathome.remotecaremanager.client.project.BaseProject;
@@ -28,6 +29,7 @@ public class DetoxProject extends BaseProject {
 		List<DatabaseTableDef<?>> result = new ArrayList<>();
 		result.add(new DetoxMessageQueueTable());
 		result.add(new DetoxProcessedMessageQueueTable());
+		result.add(new DetoxDigitalGuideDialogueCapabilityTable());
 		result.add(new DetoxTaskConfigurationTable());
 		result.add(new DetoxTaskRefreshRequestTable());
 		return result;
@@ -37,6 +39,7 @@ public class DetoxProject extends BaseProject {
 	public Map<String,List<DatabaseTableDef<?>>> getModuleTables() {
 		Map<String,List<DatabaseTableDef<?>>> result = new LinkedHashMap<>();
 		List<DatabaseTableDef<?>> taskTables = new ArrayList<>();
+		taskTables.add(new DetoxDigitalGuideDialogueCapabilityTable());
 		taskTables.add(new DetoxTaskConfigurationTable());
 		taskTables.add(new DetoxTaskRefreshRequestTable());
 		result.put("tasks", taskTables);
