@@ -131,6 +131,48 @@ DETOX_FIREBASE_SENDER_ID=...
 Because the patient app uses manual Firebase initialization, these values are
 required even if `google-services.json` is not used.
 
+## QR Code Configuration
+
+The middleware can include the app-facing API URL and Firebase client
+configuration in the Detox@Home phone-link QR code. QR generation is only
+available after logging in to the Remote Care Manager web app, and the backend
+only allows professional users to create Detox@Home phone-link QR codes.
+
+Configure these optional runtime properties:
+
+```properties
+ssaconfigMobileEnvironment=local
+ssaconfigMobileApiBaseUrl=http://10.0.2.2:10000/servlets/detoxrcm/v6.1.0
+ssaconfigMobileFirebaseOverrides=false
+ssaconfigFirebaseAppId=...
+ssaconfigFirebaseApiKey=...
+ssaconfigFirebaseProjectId=...
+ssaconfigFirebaseSenderId=...
+```
+
+The generated QR payload uses the same query parameter names expected by the
+app:
+
+```text
+detox://configure?email=...&password=...&project=...&subject=...&environment=...&apiBaseUrl=...&firebaseAppId=...&firebaseApiKey=...&firebaseProjectId=...&firebaseSenderId=...
+```
+
+Set `ssaconfigMobileEnvironment` to `local`, `production`, or `custom` when the
+QR code should select a specific patient-app sync environment. If it is empty,
+the patient app resolves the environment from the API base URL, or keeps the
+currently selected environment when no target hint is present.
+
+If `ssaconfigMobileApiBaseUrl` is empty, the middleware falls back to
+`ssaconfigBaseUrl + /v{version}` for `apiBaseUrl`.
+
+These Firebase values are client identifiers, not Firebase Admin credentials.
+When all four Firebase values are configured, they are emitted automatically
+for `ssaconfigMobileEnvironment=local` and `ssaconfigMobileEnvironment=custom`.
+Use `ssaconfigMobileFirebaseOverrides=true` to force Firebase override fields
+into the QR code for any environment, or `false` to force omitting them.
+Do not put `GOOGLE_APPLICATION_CREDENTIALS`, service-account JSON, JWT secrets,
+admin passwords, or mTLS private keys in the QR code.
+
 ## Credentials Needed By The Middleware
 
 The middleware must be able to authenticate to Firebase Admin SDK.

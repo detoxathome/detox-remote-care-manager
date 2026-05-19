@@ -51,6 +51,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
 
@@ -436,8 +438,8 @@ public class UserController {
 		ModelValidation.validate(newUser);
 		AuthControllerExecution.setPassword(newUser, password, "password",
 				true);
-		String qrPayload = buildDetoxQrPayload(email, password,
-				resolvedProjectCode);
+		String qrPayload = buildDetoxQrPayload(version, email, password,
+				resolvedProjectCode, newUser.getUserid());
 		String qrPngBase64 = createQrPngBase64(qrPayload);
 		if (project != null) {
 			try {
@@ -563,14 +565,95 @@ public class UserController {
 				"Failed to generate a unique temporary email address"));
 	}
 
-	private String buildDetoxQrPayload(String email, String password,
-			String projectCode) {
+	private String buildDetoxQrPayload(ProtocolVersion version, String email,
+			String password, String projectCode, String subject) {
 		String project = projectCode;
 		if (project == null || project.isBlank())
 			project = "detox";
-		return "detox://configure?email=" + email +
-				"&password=" + password +
-				"&project=" + project;
+		Configuration config = AppComponents.get(Configuration.class);
+		String environment = trimToNull(config.get(
+				Configuration.MOBILE_ENVIRONMENT));
+		Map<String,String> params = new LinkedHashMap<>();
+		params.put("email", email);
+		params.put("password", password);
+		params.put("project", project);
+		addOptionalQrPayloadParam(params, "subject", subject);
+		addOptionalQrPayloadParam(params, "environment", environment);
+		addOptionalQrPayloadParam(params, "apiBaseUrl",
+				getMobileApiBaseUrl(version));
+		if (shouldEmitFirebaseOverrides(config, environment)) {
+			addOptionalQrPayloadParam(params, "firebaseAppId",
+					config.get(Configuration.FIREBASE_APP_ID));
+			addOptionalQrPayloadParam(params, "firebaseApiKey",
+					config.get(Configuration.FIREBASE_API_KEY));
+			addOptionalQrPayloadParam(params, "firebaseProjectId",
+					config.get(Configuration.FIREBASE_PROJECT_ID));
+			addOptionalQrPayloadParam(params, "firebaseSenderId",
+					config.get(Configuration.FIREBASE_SENDER_ID));
+		}
+		StringJoiner query = new StringJoiner("&");
+		for (Map.Entry<String,String> param : params.entrySet()) {
+			query.add(urlEncode(param.getKey()) + "=" +
+					urlEncode(param.getValue()));
+		}
+		return "detox://configure?" + query;
+	}
+
+	private void addOptionalQrPayloadParam(Map<String,String> params,
+			String key, String value) {
+		value = trimToNull(value);
+		if (value == null)
+			return;
+		params.put(key, value);
+	}
+
+	private boolean shouldEmitFirebaseOverrides(Configuration config,
+			String environment) {
+		String configured = trimToNull(config.get(
+				Configuration.MOBILE_FIREBASE_OVERRIDES));
+		if (configured != null)
+			return isTruthy(configured);
+		if (!hasFirebaseOverrideValues(config))
+			return false;
+		return "custom".equalsIgnoreCase(environment) ||
+				"local".equalsIgnoreCase(environment);
+	}
+
+	private boolean hasFirebaseOverrideValues(Configuration config) {
+		return trimToNull(config.get(Configuration.FIREBASE_APP_ID)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_API_KEY)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_PROJECT_ID)) != null &&
+				trimToNull(config.get(Configuration.FIREBASE_SENDER_ID)) != null;
+	}
+
+	private boolean isTruthy(String value) {
+		value = value.trim().toLowerCase(Locale.ROOT);
+		return value.equals("true") || value.equals("yes") ||
+				value.equals("1") || value.equals("on");
+	}
+
+	private String trimToNull(String value) {
+		if (value == null)
+			return null;
+		value = value.trim();
+		return value.isEmpty() ? null : value;
+	}
+
+	private String getMobileApiBaseUrl(ProtocolVersion version) {
+		Configuration config = AppComponents.get(Configuration.class);
+		String configuredUrl = trimToNull(config.get(
+				Configuration.MOBILE_API_BASE_URL));
+		if (configuredUrl != null)
+			return configuredUrl;
+		String baseUrl = trimToNull(config.get(Configuration.BASE_URL));
+		if (baseUrl == null)
+			return null;
+		return baseUrl.replaceAll("/+$", "") + "/v" + version.versionName();
+	}
+
+	private String urlEncode(String value) {
+		return URLEncoder.encode(value, StandardCharsets.UTF_8)
+				.replace("+", "%20");
 	}
 
 	private String createQrPngBase64(String payload)
