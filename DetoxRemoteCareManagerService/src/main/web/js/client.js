@@ -190,6 +190,16 @@ class RemoteCareManagerClient {
 		});
 	}
 
+	getDetoxDigitalGuideDialogues(project, subject) {
+		let url = servicePath + '/project/' + encodeURIComponent(project) +
+			'/detox-subject/' + encodeURIComponent(subject) +
+			'/digital-guide-dialogues';
+		return $.ajax({
+			type: 'GET',
+			url: url
+		});
+	}
+
 	getProjectLastRecord(project, table, subject = null) {
 		let url = servicePath + '/project/' + encodeURIComponent(project) +
 			'/table/' + encodeURIComponent(table) + '/last';
