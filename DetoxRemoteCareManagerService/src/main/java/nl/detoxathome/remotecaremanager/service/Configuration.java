@@ -75,6 +75,12 @@ public class Configuration extends BaseConfiguration {
 			".mtlsKeyPath";
 	public static final String DETOX_DELETE_ACCEPTED_QUEUE_MESSAGES =
 			"detoxDeleteAcceptedQueueMessages";
+	public static final String HEALTHCHECKS_GENERAL_PING_URL =
+			"healthchecksGeneralPingUrl";
+	public static final String HEALTHCHECKS_GENERAL_PING_ENABLED =
+			"healthchecksGeneralPingEnabled";
+	public static final String HEALTHCHECKS_GENERAL_PING_INTERVAL_MS =
+			"healthchecksGeneralPingIntervalMs";
 
 	@Override
 	public String getBaseUrl() {

@@ -1,0 +1,61 @@
+<link rel="stylesheet" type="text/css" href="css/pages/status.css"></link>
+<div class="status-page">
+	<section class="status-shell">
+		<header class="status-header">
+			<p class="status-kicker">Detox@Home</p>
+			<h1 data-i18n="status_title"></h1>
+			<p data-i18n="status_intro"></p>
+		</header>
+
+		<section class="status-panel" aria-labelledby="status-healthchecks-title">
+			<div class="status-panel-header">
+				<div>
+					<h2 id="status-healthchecks-title"
+							data-i18n="status_healthchecks_title"></h2>
+					<p data-i18n="status_healthchecks_intro"></p>
+				</div>
+				<div id="status-healthchecks-badge" class="status-badge"
+						data-i18n="status_loading"></div>
+			</div>
+
+			<dl class="status-grid">
+				<div>
+					<dt data-i18n="status_outcome_label"></dt>
+					<dd id="status-healthchecks-outcome" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_enabled_label"></dt>
+					<dd id="status-healthchecks-enabled" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_schedule_label"></dt>
+					<dd id="status-healthchecks-schedule" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_last_attempt_label"></dt>
+					<dd id="status-healthchecks-last-attempt" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_last_success_label"></dt>
+					<dd id="status-healthchecks-last-success" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_last_failure_label"></dt>
+					<dd id="status-healthchecks-last-failure" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_last_status_code_label"></dt>
+					<dd id="status-healthchecks-last-status-code" data-i18n="status_loading"></dd>
+				</div>
+				<div>
+					<dt data-i18n="status_retry_policy_label"></dt>
+					<dd id="status-healthchecks-retry-policy" data-i18n="status_loading"></dd>
+				</div>
+			</dl>
+		</section>
+	</section>
+</div>
+
+<script type="text/javascript">
+	loadJS('pages/status');
+</script>

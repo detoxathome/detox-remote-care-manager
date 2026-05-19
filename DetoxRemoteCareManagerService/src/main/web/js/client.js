@@ -46,6 +46,13 @@ class RemoteCareManagerClient {
 		});
 	}
 
+	getHealthchecksGeneralStatus() {
+		return $.ajax({
+			type: 'GET',
+			url: servicePath + '/status/healthchecks-general'
+		});
+	}
+
 	/**
 	 * Calls endpoint PUT /auth/change-password
 	 */

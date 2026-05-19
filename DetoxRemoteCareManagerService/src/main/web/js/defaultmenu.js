@@ -3,6 +3,9 @@ class DefaultMenuController {
 		menuController.appendMenuItem('home',
 			i18next.t('home'),
 			basePath + '/');
+		menuController.appendMenuItem('status',
+			i18next.t('status'),
+			basePath + '/status');
 		menuController.appendMenuItem('account',
 			i18next.t('my_account'),
 			basePath + '/me/account');
