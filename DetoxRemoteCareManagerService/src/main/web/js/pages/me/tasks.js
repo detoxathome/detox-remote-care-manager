@@ -5,6 +5,7 @@ class RemoteTaskEditorPage {
 		this._table = 'task_configurations';
 		this._refreshTimeoutMs = 20000;
 		this._pollIntervalMs = 2000;
+		this._verificationGraceMs = 5000;
 		this._user = null;
 		this._subjects = [];
 		this._subjectMap = {};
@@ -1202,12 +1203,32 @@ class RemoteTaskEditorPage {
 			return;
 		}
 
+		this._setBusy(true);
+		this._setVerificationState('pending',
+			this._t('verify_status_settle'),
+			{
+			subjectId: subjectId,
+			recordId: publishedRecordId
+		});
+		window.setTimeout(() => {
+			this._requestVerificationEcho(subjectId, publishedRecordId,
+				publishedSignature);
+		}, this._verificationGraceMs);
+	}
+
+	_requestVerificationEcho(subjectId, publishedRecordId, publishedSignature) {
+		if (subjectId !== this._selectedSubject ||
+				!this._verificationState ||
+				this._verificationState.subjectId !== subjectId ||
+				this._verificationState.recordId !== publishedRecordId ||
+				this._verificationState.status !== 'pending') {
+			return;
+		}
 		const summary = this._selectedSubjectSummary;
-		const initialMessage = summary && !summary.pushReady ?
+		const requestMessage = summary && !summary.pushReady ?
 			this._t('verify_status_request_no_push') :
 			this._t('verify_status_request');
-		this._setBusy(true);
-		this._setVerificationState('pending', initialMessage, {
+		this._setVerificationState('pending', requestMessage, {
 			subjectId: subjectId,
 			recordId: publishedRecordId
 		});
